@@ -19,7 +19,8 @@
 // Estructura para almacenar la acción y los argumentos
 typedef struct {
     char *action;
-    char *arguments;
+    char *UserName;
+    char *arguments;              
 } ParsedMessage;
 
 // Inicialización de función de lectura
@@ -54,6 +55,7 @@ typedef struct {
     pthread_mutex_t mutex;
 } PublicationList;
 
+extern PublicationList publicationList;
 
 // Declaraciones de funciones
 void initializeUserList();

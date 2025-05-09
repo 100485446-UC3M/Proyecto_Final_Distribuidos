@@ -3,7 +3,7 @@
 // Definir funciones necesarias para decodificar mensajes 
 
 // Función para recibir y separar acción y argumentos
-int parseMessage(int socket, ParsedMessage *parsedMessage) {
+int parseMessage(int socket, ParsedMessage *parsedMessage){
     char buffer[256];
     ssize_t bytesRead;
 
@@ -27,25 +27,33 @@ int parseMessage(int socket, ParsedMessage *parsedMessage) {
          return ERROR_COMMUNICATION;
      }
 
-    // Leer los argumentos (segunda cadena)
+    // Leer el nombre de usuario
     bytesRead = readLine(socket, buffer, sizeof(buffer));
     if (bytesRead < 0) {
         perror("Error al leer los argumentos desde el socket");
         free(parsedMessage->action); // Liberar memoria en caso de error
         return ERROR_COMMUNICATION;
     }
-
-    // Asignar los argumentos si existen
-    if (bytesRead > 0) {
-        parsedMessage->arguments = strdup(buffer); // Copiar los argumentos
-        if (parsedMessage->arguments == NULL) {
-            perror("Error al asignar memoria para los argumentos");
-            free(parsedMessage->action); // Liberar memoria en caso de error
-            return ERROR_COMMUNICATION;
-        }
-    } else {
-        parsedMessage->arguments = NULL; // No hay argumentos
+    parsedMessage->UserName = strdup(buffer); // Copiar los argumentos
+    if (parsedMessage->UserName == NULL) {
+        perror("Error al asignar memoria para los argumentos");
+        free(parsedMessage->action); // Liberar memoria en caso de error
+        return ERROR_COMMUNICATION;
     }
+
+   // Leer otros argumentos (opcional)
+   bytesRead = readLine(socket, buffer, sizeof(buffer));
+   if (bytesRead > 0) {
+       parsedMessage->arguments = strdup(buffer);
+       if (parsedMessage->arguments == NULL) {
+           perror("Error al asignar memoria para los argumentos");
+           free(parsedMessage->action);
+           free(parsedMessage->UserName);
+           return ERROR_COMMUNICATION;
+       }
+   } else {
+       parsedMessage->arguments = NULL;
+   }
     return 0;
 }
 
@@ -54,6 +62,10 @@ void freeParsedMessage(ParsedMessage *parsedMessage) {
     if (parsedMessage->action != NULL) {
         free(parsedMessage->action);
         parsedMessage->action = NULL;
+    }
+    if (parsedMessage->UserName != NULL) {
+        free(parsedMessage->UserName);
+        parsedMessage->UserName = NULL;
     }
     if (parsedMessage->arguments != NULL) {
         free(parsedMessage->arguments);
@@ -284,8 +296,7 @@ int recvMessage(int socket, char * buffer, int len){
 }
 
 // Función para leer una línea desde un socket
-ssize_t readLine(int socket, char * buffer, size_t n)
-{
+ssize_t readLine(int socket, char * buffer, size_t n){
     if (n <= 0 || buffer == NULL) {
         perror("Error al leer el mensaje");
         return -2;
@@ -333,5 +344,3 @@ ssize_t readLine(int socket, char * buffer, size_t n)
     *buf = '\0';
     return totRead;
 }
-
-

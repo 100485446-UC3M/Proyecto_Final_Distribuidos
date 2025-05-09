@@ -25,37 +25,37 @@ void * SendResponse(void * sc){
     }
     // Procesar la solicitud
     if (strcmp(parsedMessage.action, "REGISTER") == 0) {
-            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.arguments);
+            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
 
-            if (parsedMessage.arguments == NULL) {
-                perror("SERVIDOR: Argumentos faltantes para REGISTER");
+            if (parsedMessage.UserName == NULL) {
+                perror("SERVIDOR: Username faltantes para REGISTER");
                 ret = 2; // Error en la comunicación
-            }else if(is_user_registered(parsedMessage.arguments)) {
+            }else if(is_user_registered(parsedMessage.UserName)) {
                 ret = 1; // Usuario ya registrado
-            } else if (register_user(parsedMessage.arguments) == 0) {
+            } else if (register_user(parsedMessage.UserName) == 0) {
                 ret = 0; // Registro exitoso
             } else {
                 ret = 2; // Error en el registro
             }
         } else if (strcmp(parsedMessage.action, "UNREGISTER") == 0) {
 
-            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.arguments);
+            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
 
-            if (parsedMessage.arguments == NULL) {
-                perror("SERVIDOR: Argumentos faltantes para UNREGISTER");
+            if (parsedMessage.UserName == NULL) {
+                perror("SERVIDOR: Username faltantes para UNREGISTER");
                 ret = 2; // Error en la comunicación
-            }else if (!is_user_registered(parsedMessage.arguments)) {
+            }else if (!is_user_registered(parsedMessage.UserName)) {
                 ret = 1; // Usuario no existe
-            } else if (unregister_user(parsedMessage.arguments) == 0) {
+            } else if (unregister_user(parsedMessage.UserName) == 0) {
                 ret = 0; // Baja exitosa
             } else {
                 ret = 2; // Error al eliminar
             }
         } else if (strcmp(parsedMessage.action, "CONNECT") == 0) {
-            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.arguments ? parsedMessage.arguments : "N/A");
+            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
 
-            if (parsedMessage.arguments == NULL) {
-                perror("SERVIDOR: Argumentos faltantes para CONNECT");
+            if (parsedMessage.UserName == NULL) {
+                perror("SERVIDOR: Username faltantes para CONNECT");
                 ret = 3; // Error en la comunicación
             } else {
             // Leer el puerto del cliente
@@ -70,11 +70,11 @@ void * SendResponse(void * sc){
             if (client_port < 1024 || client_port > 49151) {
                 perror("SERVIDOR: Puerto inválido recibido del cliente");
                 ret = 3; // Error en la comunicación
-            } else if (!is_user_registered(parsedMessage.arguments)) {
+            } else if (!is_user_registered(parsedMessage.UserName)) {
                 ret = 1; // Usuario no existe
-            } else if (is_user_connected(parsedMessage.arguments)) {
+            } else if (is_user_connected(parsedMessage.UserName)) {
                 ret = 2; // Usuario ya conectado
-            } else if (register_connection(parsedMessage.arguments, client_port) == 0) {
+            } else if (register_connection(parsedMessage.UserName, client_port) == 0) {
                 ret = 0; // Conexión exitosa
             } else {
                 ret = 3; // Error al registrar la conexión
@@ -82,23 +82,21 @@ void * SendResponse(void * sc){
         }
     } 
     } else if (strcmp(parsedMessage.action, "PUBLISH") == 0) {
-        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.arguments ? parsedMessage.arguments : "N/A");
+        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
 
-        if (parsedMessage.arguments == NULL) {
-            perror("SERVIDOR: Argumentos faltantes para PUBLISH");
+        if (parsedMessage.UserName == NULL) {
+            perror("SERVIDOR: Username faltantes para PUBLISH");
             ret = 4; // Error en la comunicación
         } else {
-            // Leer el nombre del archivo
-            ssize_t bytesRead = readLine(s_local, buffer, sizeof(buffer));
-            if (bytesRead <= 0) {
+            if (parsedMessage.arguments == NULL) {
                 perror("SERVIDOR: Error al leer el nombre del archivo");
                 ret = 4; // Error en la comunicación
             } else {
                 char file_name[256];
-                strncpy(file_name, buffer, sizeof(file_name));
-
+                snprintf(file_name, sizeof(file_name), "%s", parsedMessage.arguments);
+                ssize_t bytesRead;
                 // Leer la descripción
-                memset(buffer, 0, sizeof(buffer));
+                memset(parsedMessage.arguments, 0, sizeof(parsedMessage.arguments));
                 bytesRead = readLine(s_local, buffer, sizeof(buffer));
                 if (bytesRead <= 0) {
                     perror("SERVIDOR: Error al leer la descripción");
@@ -107,13 +105,13 @@ void * SendResponse(void * sc){
                     char description[256];
                     strncpy(description, buffer, sizeof(description));
                     // Verificar si el usuario existe
-                    if (!is_user_registered(parsedMessage.arguments)) {
+                    if (!is_user_registered(parsedMessage.UserName)) {
                         ret = 1; // Usuario no existe
-                    } else if (!is_user_connected(parsedMessage.arguments)) {
+                    } else if (!is_user_connected(parsedMessage.UserName)) {
                         ret = 2; // Usuario no conectado
                     } else if (is_file_published(file_name)) {
                         ret = 3; // Archivo ya publicado
-                    } else if (register_publication(parsedMessage.arguments, file_name, description) == 0) {
+                    } else if (register_publication(parsedMessage.UserName, file_name, description) == 0) {
                         ret = 0; // Publicación exitosa
                     } else {
                         ret = 4; // Error al registrar la publicación
@@ -122,24 +120,21 @@ void * SendResponse(void * sc){
             }
         }
     } else if (strcmp(parsedMessage.action, "DELETE") == 0) {
-        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.arguments ? parsedMessage.arguments : "N/A");
+        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName );
     
-        if (parsedMessage.arguments == NULL) {
-            perror("SERVIDOR: Argumentos faltantes para DELETE");
+        if (parsedMessage.UserName == NULL) {
+            perror("SERVIDOR: Username faltantes para DELETE");
             ret = 4; // Error en la comunicación
         } else {
-            // Leer el nombre del archivo
-            ssize_t bytesRead = readLine(s_local, buffer, sizeof(buffer));
-            if (bytesRead <= 0) {
+            if (parsedMessage.arguments == NULL) {
                 perror("SERVIDOR: Error al leer el nombre del archivo");
                 ret = 4; // Error en la comunicación
             } else {
                 char file_name[256];
-                strncpy(file_name, buffer, sizeof(file_name));
-                            // Verificar si el usuario existe
-                if (!is_user_registered(parsedMessage.arguments)) {
+                snprintf(file_name, sizeof(file_name), "%s", parsedMessage.arguments);
+                if (!is_user_registered(parsedMessage.UserName)) {
                     ret = 1; // Usuario no existe
-                } else if (!is_user_connected(parsedMessage.arguments)) {
+                } else if (!is_user_connected(parsedMessage.UserName)) {
                     ret = 2; // Usuario no conectado
                 } else if (!is_file_published(file_name)) {
                     ret = 3; // Archivo no publicado
