@@ -9,7 +9,7 @@ UserList userList = {NULL, PTHREAD_MUTEX_INITIALIZER};
 
 // Función ejecutado por cada hilo para atender petición del cliente
 void * SendResponse(void * sc){
-    printf("Entramos al hilo")
+    printf("Entramos al hilo");
     int s_local;
     int ret;
     s_local = (* (int *) sc);
@@ -65,18 +65,17 @@ void * SendResponse(void * sc){
 
 int main(int argc, char * argv[]) {
 
-    if (argc != 2){
-        printf ("SERVIDOR. Uso: ./servidor <puerto>\n");
+    if (argc != 3 || strcmp(argv[1], "-p") != 0) {
+        printf("Uso: ./servidor -p <port>\n");
         goto cleanup_servidor;
     }
-    //IDEA: restringir el tipo de puerto
-    else{
-        char *endptr;
-        long port = strtol(argv[1], &endptr, 10);
-        if (*endptr != '\0' || port < 1024 || port > 49151) {
-            perror("SERVIDOR: debe usar un puerto registrado\n");
-            goto cleanup_servidor;
-        }
+
+    
+    char *endptr;
+    long port = strtol(argv[1], &endptr, 10);
+    if (*endptr != '\0' || port < 1024 || port > 49151) {
+        perror("SERVIDOR: debe usar un puerto registrado\n");
+        goto cleanup_servidor;
     }
 
     struct sockaddr_in server_addr, client_addr;
@@ -111,6 +110,20 @@ int main(int argc, char * argv[]) {
     }
     printf("SERVIDOR: Activo\n");
 
+    // Obtener la IP local
+    struct sockaddr_in local_addr;
+    socklen_t addr_len = sizeof(local_addr);
+    if (getsockname(ss, (struct sockaddr *)&local_addr, &addr_len) == -1) {
+        perror("SERVIDOR: Error al obtener la dirección local\n");
+        close(ss);
+        return -1;
+    }
+    char local_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &local_addr.sin_addr, local_ip, INET_ADDRSTRLEN);
+
+    // Mostrar mensaje de inicio
+    printf("s > init server %s:%d\n", local_ip, port);
+    
     // Inicializar variable global de control (busy)
     busy = 1;
 
