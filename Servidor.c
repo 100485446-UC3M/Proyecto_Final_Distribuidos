@@ -72,7 +72,7 @@ int main(int argc, char * argv[]) {
 
     
     char *endptr;
-    long port = strtol(argv[1], &endptr, 10);
+    long port = strtol(argv[2], &endptr, 10);
     if (*endptr != '\0' || port < 1024 || port > 49151) {
         perror("SERVIDOR: debe usar un puerto registrado\n");
         goto cleanup_servidor;
@@ -96,7 +96,7 @@ int main(int argc, char * argv[]) {
     // Asignar dirección IP y puerto
     memset((char *)&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(atoi(argv[1]));
+    server_addr.sin_port = htons(port);
     server_addr.sin_addr.s_addr = INADDR_ANY;
     if (bind(ss, (const struct sockaddr *) &server_addr, sizeof(server_addr)) != 0){
         perror("SERVIDOR: Error al asignar dirección al socket\n");
