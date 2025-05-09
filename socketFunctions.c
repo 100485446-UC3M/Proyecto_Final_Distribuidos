@@ -1,0 +1,205 @@
+#include "server.h"
+
+// Definir funciones necesarias para decodificar mensajes 
+
+// Función para recibir y separar acción y argumentos
+int parseMessage(int socket, ParsedMessage *parsedMessage) {
+    char buffer[256];
+    ssize_t bytesRead;
+
+    // Leer el mensaje completo desde el socket
+    bytesRead = readLine(socket, buffer, sizeof(buffer));
+    if (bytesRead <= 0) {
+        perror("Error al leer el mensaje desde el socket");
+        return ERROR_COMMUNICATION;
+    }
+
+    // Validar que el mensaje tenga al menos un carácter para la acción
+    if (bytesRead < 1 || !isprint(buffer[0])) {
+        perror("Mensaje inválido: no contiene una acción válida");
+        return ERROR_COMMUNICATION;
+    }
+
+    // Leer los argumentos (segunda cadena)
+    bytesRead = readLine(socket, buffer, sizeof(buffer));
+    if (bytesRead < 0) {
+        perror("Error al leer los argumentos desde el socket");
+        return ERROR_COMMUNICATION;
+    }
+
+    // Asignar los argumentos si existen
+    if (bytesRead > 0) {
+        parsedMessage->arguments = strdup(buffer); // Copiar los argumentos
+        if (parsedMessage->arguments == NULL) {
+            perror("Error al asignar memoria para los argumentos");
+            return ERROR_COMMUNICATION;
+        }
+    } else {
+        parsedMessage->arguments = NULL; // No hay argumentos
+    }
+
+    return 0; // Éxito
+}
+
+// Función para liberar la memoria de ParsedMessage
+void freeParsedMessage(ParsedMessage *parsedMessage) {
+    if (parsedMessage->arguments != NULL) {
+        free(parsedMessage->arguments);
+        parsedMessage->arguments = NULL;
+    }
+}
+
+void initializeUserList() {
+    userList.head = NULL;
+    pthread_mutex_init(&userList.mutex, NULL);
+}
+
+
+// Función para verificar si un usuario ya está registrado
+int is_user_registered(const char *username) {
+    pthread_mutex_lock(&userList.mutex);
+
+    UserNode *current = userList.head;
+    while (current != NULL) {
+        if (strcmp(current->username, username) == 0) {
+            pthread_mutex_unlock(&userList.mutex);
+            return 1; // Usuario encontrado
+        }
+        current = current->next;
+    }
+    pthread_mutex_unlock(&userList.mutex);
+    return 0; // Usuario no encontrado
+}
+
+// Función para registrar un usuario
+int register_user(const char *username) {
+
+    // Crear un nuevo nodo
+    UserNode *newNode = (UserNode *)malloc(sizeof(UserNode));
+    if (newNode == NULL) {
+        perror("Error al asignar memoria para el nuevo usuario");
+        return -1; // Error de memoria
+    }
+    strncpy(newNode->username, username, sizeof(newNode->username) - 1);
+    newNode->username[sizeof(newNode->username) - 1] = '\0';
+    newNode->next = NULL;
+
+    // Agregar el nodo a la lista
+    pthread_mutex_lock(&userList.mutex);
+    newNode->next = userList.head;
+    userList.head = newNode;
+    pthread_mutex_unlock(&userList.mutex);
+
+    return 0; // Registro exitoso
+}
+
+// Liberar la memoria de la lista de usuarios
+void free_user_list() {
+    pthread_mutex_lock(&userList.mutex);
+
+    UserNode *current = userList.head;
+    while (current != NULL) {
+        UserNode *temp = current;
+        current = current->next;
+        free(temp);
+    }
+    userList.head = NULL;
+
+    pthread_mutex_unlock(&userList.mutex);
+    pthread_mutex_destroy(&userList.mutex);
+}
+
+// Función para enviar un mensaje carácter por carácter
+int sendMessage(int socket, char * buffer, int len){
+    int r;
+    int l = len;
+    do {
+        r = write(socket, buffer, 1);
+        l -= r;
+        buffer += r;
+    } while ((l>0) && (r>=0));
+
+    if (r < 0){
+        close(socket);
+        perror("Error al enviar la petición");
+        return -2;
+    }
+    else {
+        return 0;
+    }
+
+}
+
+// Función para recibir un mensaje carácter por carácter
+int recvMessage(int socket, char * buffer, int len){
+    int r;
+    int l = len;
+    // leer los datos byte a byte
+    do {
+        r = read(socket, buffer, 1);
+        l -= r;
+        buffer += r;
+    } while ((l>0) && (r>=0));
+
+    if (r < 0){
+        close(socket);
+        perror("Error al recuperar la respuesta");
+        return -2;
+    }
+    else {
+        return 0;
+    }
+}
+
+// Función para leer una línea desde un socket
+ssize_t readLine(int socket, char * buffer, size_t n)
+{
+    if (n <= 0 || buffer == NULL) {
+        perror("Error al leer el mensaje");
+        return -2;
+    }
+
+    // Número de bytes leídos por el último fetch
+    ssize_t numRead;   
+    // Total de bytes leídos hasta el momento
+    size_t totRead = 0;   
+    char * buf = buffer;
+    char ch;
+
+    for (;;) {
+        // Leer un byte del socket
+        numRead = read(socket, &ch, 1);   
+        if (numRead == -1) {
+            // reiniciar read al ser interrumpido
+            if (errno == EINTR) continue;
+            else{
+                //Cualquier otro error
+                close(socket);
+                perror("Error al leer el mensaje");
+                return -2;                  
+            }
+        } else if (numRead == 0) { //EOF
+            // ningún byte leído, lo que implica que el archivo está vacío
+            if (totRead == 0)          
+                return 0;
+            else
+                break;
+        } else { 
+            // numRead debe ser 1 si hemos llegado hasta aquí
+            if (ch == '\n')
+                break;
+            if (ch == '\0')
+                break;
+            // descartar n-1 bytes
+            if (totRead < n - 1) {     
+                totRead++;
+                *buf++ = ch;
+            }
+        }
+    }
+
+    *buf = '\0';
+    return totRead;
+}
+
+
