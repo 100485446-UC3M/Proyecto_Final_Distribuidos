@@ -42,6 +42,18 @@ typedef struct {
 // Declarar la lista global de usuarios
 extern UserList userList;
 
+typedef struct PublicationNode {
+    char file_name[256];
+    char description[256];
+    char username[256];
+    struct PublicationNode *next;
+} PublicationNode;
+
+typedef struct {
+    PublicationNode *head;
+    pthread_mutex_t mutex;
+} PublicationList;
+
 
 // Declaraciones de funciones
 void initializeUserList();
@@ -51,6 +63,9 @@ int unregister_user(const char *username);
 void free_user_list();
 int is_user_connected(const char *username);
 int register_connection(const char *username, int port);
+int is_file_published(const char *file_name);
+int register_publication(const char *username, const char *file_name, const char *description);
+int delete_publication(const char *file_name);
 int sendMessage(int socket, char *buffer, int len);
 int recvMessage(int socket, char *buffer, int len);
 ssize_t readLine(int socket, char *buffer, size_t n);

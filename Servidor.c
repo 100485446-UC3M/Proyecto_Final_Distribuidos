@@ -6,6 +6,7 @@ pthread_mutex_t mutex2;
 pthread_cond_t cond;
 int busy;
 UserList userList = {NULL, PTHREAD_MUTEX_INITIALIZER};
+PublicationList publicationList = {NULL, PTHREAD_MUTEX_INITIALIZER};
 
 // Función ejecutado por cada hilo para atender petición del cliente
 void * SendResponse(void * sc){
@@ -80,6 +81,75 @@ void * SendResponse(void * sc){
             }
         }
     } 
+    } else if (strcmp(parsedMessage.action, "PUBLISH") == 0) {
+        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.arguments ? parsedMessage.arguments : "N/A");
+
+        if (parsedMessage.arguments == NULL) {
+            perror("SERVIDOR: Argumentos faltantes para PUBLISH");
+            ret = 4; // Error en la comunicación
+        } else {
+            // Leer el nombre del archivo
+            ssize_t bytesRead = readLine(s_local, buffer, sizeof(buffer));
+            if (bytesRead <= 0) {
+                perror("SERVIDOR: Error al leer el nombre del archivo");
+                ret = 4; // Error en la comunicación
+            } else {
+                char file_name[256];
+                strncpy(file_name, buffer, sizeof(file_name));
+
+                // Leer la descripción
+                memset(buffer, 0, sizeof(buffer));
+                bytesRead = readLine(s_local, buffer, sizeof(buffer));
+                if (bytesRead <= 0) {
+                    perror("SERVIDOR: Error al leer la descripción");
+                    ret = 4; // Error en la comunicación
+                } else {
+                    char description[256];
+                    strncpy(description, buffer, sizeof(description));
+                    // Verificar si el usuario existe
+                    if (!is_user_registered(parsedMessage.arguments)) {
+                        ret = 1; // Usuario no existe
+                    } else if (!is_user_connected(parsedMessage.arguments)) {
+                        ret = 2; // Usuario no conectado
+                    } else if (is_file_published(file_name)) {
+                        ret = 3; // Archivo ya publicado
+                    } else if (register_publication(parsedMessage.arguments, file_name, description) == 0) {
+                        ret = 0; // Publicación exitosa
+                    } else {
+                        ret = 4; // Error al registrar la publicación
+                    }
+                }
+            }
+        }
+    } else if (strcmp(parsedMessage.action, "DELETE") == 0) {
+        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.arguments ? parsedMessage.arguments : "N/A");
+    
+        if (parsedMessage.arguments == NULL) {
+            perror("SERVIDOR: Argumentos faltantes para DELETE");
+            ret = 4; // Error en la comunicación
+        } else {
+            // Leer el nombre del archivo
+            ssize_t bytesRead = readLine(s_local, buffer, sizeof(buffer));
+            if (bytesRead <= 0) {
+                perror("SERVIDOR: Error al leer el nombre del archivo");
+                ret = 4; // Error en la comunicación
+            } else {
+                char file_name[256];
+                strncpy(file_name, buffer, sizeof(file_name));
+                            // Verificar si el usuario existe
+                if (!is_user_registered(parsedMessage.arguments)) {
+                    ret = 1; // Usuario no existe
+                } else if (!is_user_connected(parsedMessage.arguments)) {
+                    ret = 2; // Usuario no conectado
+                } else if (!is_file_published(file_name)) {
+                    ret = 3; // Archivo no publicado
+                } else if (delete_publication(file_name) == 0) {
+                    ret = 0; // Eliminación exitosa
+                } else {
+                    ret = 4; // Error al eliminar la publicación
+                }
+            }
+        }
     } else {
         perror("SERVIDOR: No existe la acción requerida");
         ret = ERROR_COMMUNICATION;

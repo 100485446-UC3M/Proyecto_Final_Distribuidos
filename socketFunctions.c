@@ -180,6 +180,67 @@ int register_connection(const char *username, int port) {
     return -1; // Usuario no encontrado
 }
 
+int is_file_published(const char *file_name) {
+    pthread_mutex_lock(&publicationList.mutex);
+
+    PublicationNode *current = publicationList.head;
+    while (current != NULL) {
+        if (strcmp(current->file_name, file_name) == 0) {
+            pthread_mutex_unlock(&publicationList.mutex);
+            return 1; // Archivo ya publicado
+        }
+        current = current->next;
+    }
+
+    pthread_mutex_unlock(&publicationList.mutex);
+    return 0; // Archivo no publicado
+}
+
+int register_publication(const char *username, const char *file_name, const char *description) {
+    pthread_mutex_lock(&publicationList.mutex);
+
+    PublicationNode *new_node = malloc(sizeof(PublicationNode));
+    if (new_node == NULL) {
+        pthread_mutex_unlock(&publicationList.mutex);
+        return -1; // Error al asignar memoria
+    }
+
+    strncpy(new_node->file_name, file_name, sizeof(new_node->file_name));
+    strncpy(new_node->description, description, sizeof(new_node->description));
+    strncpy(new_node->username, username, sizeof(new_node->username));
+    new_node->next = publicationList.head;
+    publicationList.head = new_node;
+
+    pthread_mutex_unlock(&publicationList.mutex);
+    return 0; // Publicación registrada
+}
+
+int delete_publication(const char *file_name) {
+    pthread_mutex_lock(&publicationList.mutex);
+
+    PublicationNode *current = publicationList.head;
+    PublicationNode *previous = NULL;
+
+    while (current != NULL) {
+        if (strcmp(current->file_name, file_name) == 0) {
+            // Eliminar el nodo
+            if (previous == NULL) {
+                publicationList.head = current->next; // Eliminar el primer nodo
+            } else {
+                previous->next = current->next; // Saltar el nodo actual
+            }
+            free(current);
+            pthread_mutex_unlock(&publicationList.mutex);
+            return 0; // Eliminación exitosa
+        }
+        previous = current;
+        current = current->next;
+    }
+
+    pthread_mutex_unlock(&publicationList.mutex);
+    return -1; // Archivo no encontrado
+}
+
 // Función para enviar un mensaje carácter por carácter
 int sendMessage(int socket, char * buffer, int len){
     int r;
