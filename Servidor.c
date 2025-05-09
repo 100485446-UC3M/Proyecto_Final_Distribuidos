@@ -25,7 +25,7 @@ void * SendResponse(void * sc){
     // Procesar la solicitud
     switch (parsedMessage.action) {
         case REGISTER:
-            printf("OPERATION %c FROM %s\n", parsedMessage.action, parsedMessage.arguments ? parsedMessage.arguments : "N/A");
+            printf("OPERATION %c FROM %s\n", parsedMessage.action, parsedMessage.arguments);
 
             if (parsedMessage.arguments == NULL) {
                 perror("SERVIDOR: Argumentos faltantes para REGISTER");
@@ -42,7 +42,24 @@ void * SendResponse(void * sc){
                 ret = 2; // Error en el registro
             }
             break;
+        case UNREGISTER:
+            printf("OPERATION %c FROM %s\n", parsedMessage.action, parsedMessage.arguments);
 
+            if (parsedMessage.arguments == NULL) {
+                perror("SERVIDOR: Argumentos faltantes para UNREGISTER");
+                ret = 2; // Error en la comunicación
+                break;
+            }
+
+            // Eliminar al usuario
+            if (!is_user_registered(parsedMessage.arguments)) {
+                ret = 1; // Usuario no existe
+            } else if (unregister_user(parsedMessage.arguments) == 0) {
+                ret = 0; // Baja exitosa
+            } else {
+                ret = 2; // Error al eliminar
+            }
+            break;
     default:
         perror("SERVIDOR: No existe la acción requerida");
         ret = ERROR_COMMUNICATION;
@@ -123,7 +140,7 @@ int main(int argc, char * argv[]) {
 
     // Mostrar mensaje de inicio
     printf("s > init server %s:%d\n", local_ip, port);
-    
+
     // Inicializar variable global de control (busy)
     busy = 1;
 

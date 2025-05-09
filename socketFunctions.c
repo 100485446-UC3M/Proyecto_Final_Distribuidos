@@ -93,6 +93,32 @@ int register_user(const char *username) {
     return 0; // Registro exitoso
 }
 
+int unregister_user(const char *username) {
+    pthread_mutex_lock(&userList.mutex);
+
+    UserNode *current = userList.head;
+    UserNode *previous = NULL;
+
+    while (current != NULL) {
+        if (strcmp(current->username, username) == 0) {
+            // Eliminar el nodo
+            if (previous == NULL) {
+                userList.head = current->next; // Eliminar el primer nodo
+            } else {
+                previous->next = current->next; // Saltar el nodo actual
+            }
+            free(current);
+            pthread_mutex_unlock(&userList.mutex);
+            return 0; // Baja exitosa
+        }
+        previous = current;
+        current = current->next;
+    }
+
+    pthread_mutex_unlock(&userList.mutex);
+    return -1; // Usuario no encontrado
+}
+
 // Liberar la memoria de la lista de usuarios
 void free_user_list() {
     pthread_mutex_lock(&userList.mutex);

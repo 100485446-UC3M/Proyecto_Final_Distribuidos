@@ -45,6 +45,7 @@ extern UserList userList;
 void initializeUserList();
 int is_user_registered(const char *username);
 int register_user(const char *username);
+int unregister_user(const char *username);
 void free_user_list();
 int sendMessage(int socket, char *buffer, int len);
 int recvMessage(int socket, char *buffer, int len);
