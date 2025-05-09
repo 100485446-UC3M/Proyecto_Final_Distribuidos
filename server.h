@@ -18,7 +18,7 @@
 
 // Estructura para almacenar la acción y los argumentos
 typedef struct {
-    char action;
+    char *action;
     char *arguments;
 } ParsedMessage;
 
@@ -28,6 +28,8 @@ ssize_t readLine(int socket, char *buffer, size_t n);
 // Estructura para almacenar usuario registrados
 typedef struct UserNode {
     char username[256];           // Nombre del usuario
+    int connected;                // Estado de conexión (0 = desconectado, 1 = conectado)
+    int port;                     // Puerto del cliente
     struct UserNode *next;        // Puntero al siguiente nodo
 } UserNode;
 
@@ -54,7 +56,6 @@ int parseMessage(int socket, ParsedMessage *parsedMessage);
 void freeParsedMessage(ParsedMessage *parsedMessage);
 
 //Definir constantes globales que se van a utilizar con frecuencia
-#define REGISTER '0'
 #define ERROR_TUPLAS -1
 #define ERROR_COMMUNICATION -2
 

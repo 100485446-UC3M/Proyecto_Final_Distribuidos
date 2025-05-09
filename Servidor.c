@@ -9,7 +9,7 @@ UserList userList = {NULL, PTHREAD_MUTEX_INITIALIZER};
 
 // Función ejecutado por cada hilo para atender petición del cliente
 void * SendResponse(void * sc){
-    printf("Entramos al hilo");
+    printf("Entramos al hilo\n");
     int s_local;
     int ret;
     s_local = (* (int *) sc);
@@ -23,60 +23,79 @@ void * SendResponse(void * sc){
         pthread_exit(&ret);
     }
     // Procesar la solicitud
-    switch (parsedMessage.action) {
-        case REGISTER:
+    if (strcmp(parsedMessage.action, "REGISTER") == 0) {
             printf("OPERATION %c FROM %s\n", parsedMessage.action, parsedMessage.arguments);
 
             if (parsedMessage.arguments == NULL) {
                 perror("SERVIDOR: Argumentos faltantes para REGISTER");
                 ret = 2; // Error en la comunicación
-                break;
-            }
-
-            // Registrar al usuario
-            if (is_user_registered(parsedMessage.arguments)) {
+            }else if(is_user_registered(parsedMessage.arguments)) {
                 ret = 1; // Usuario ya registrado
             } else if (register_user(parsedMessage.arguments) == 0) {
                 ret = 0; // Registro exitoso
             } else {
                 ret = 2; // Error en el registro
             }
-            break;
-        case UNREGISTER:
+        } else if (strcmp(parsedMessage.action, "UNREGISTER") == 0) {
+
             printf("OPERATION %c FROM %s\n", parsedMessage.action, parsedMessage.arguments);
 
             if (parsedMessage.arguments == NULL) {
                 perror("SERVIDOR: Argumentos faltantes para UNREGISTER");
                 ret = 2; // Error en la comunicación
-                break;
-            }
-
-            // Eliminar al usuario
-            if (!is_user_registered(parsedMessage.arguments)) {
+            }else if (!is_user_registered(parsedMessage.arguments)) {
                 ret = 1; // Usuario no existe
             } else if (unregister_user(parsedMessage.arguments) == 0) {
                 ret = 0; // Baja exitosa
             } else {
                 ret = 2; // Error al eliminar
             }
-            break;
-    default:
+        } else if (strcmp(parsedMessage.action, "CONNECT") == 0) {
+            printf("OPERATION %c FROM %s\n", parsedMessage.action, parsedMessage.arguments ? parsedMessage.arguments : "N/A");
+
+            if (parsedMessage.arguments == NULL) {
+                perror("SERVIDOR: Argumentos faltantes para CONNECT");
+                ret = 3; // Error en la comunicación
+                break;
+            } else {
+            // Leer el puerto del cliente
+            bytesRead = readLine(s_local, buffer, sizeof(buffer));
+            if (bytesRead <= 0) {
+                perror("SERVIDOR: Error al leer el puerto del cliente");
+                ret = 3; // Error en la comunicación
+                break;
+            } else {
+            int client_port = atoi(buffer);
+            if (client_port < 1024 || client_port > 49151) {
+                perror("SERVIDOR: Puerto inválido recibido del cliente");
+                ret = 3; // Error en la comunicación
+            } else if (!is_user_registered(parsedMessage.arguments)) {
+                ret = 1; // Usuario no existe
+            } else if (is_user_connected(parsedMessage.arguments)) {
+                ret = 2; // Usuario ya conectado
+            } else if (register_connection(parsedMessage.arguments, client_port) == 0) {
+                ret = 0; // Conexión exitosa
+            } else {
+                ret = 3; // Error al registrar la conexión
+            }
+        }
+    } 
+    } else {
         perror("SERVIDOR: No existe la acción requerida");
         ret = ERROR_COMMUNICATION;
-        break;
     }
 
     // Enviar respuesta al cliente
-    send_response:
-        snprintf(buffer, sizeof(buffer), "%d", ret);
-        if ((ret = sendMessage(s_local, buffer, strlen(buffer) + 1)) != 0) {
-            perror("SERVIDOR: Error al enviar el resultado al cliente");
-        }
-    
-        // Liberar recursos
-        freeParsedMessage(&parsedMessage);
-        close(s_local);
-        pthread_exit(&ret);
+
+    snprintf(buffer, sizeof(buffer), "%d", ret);
+    if ((ret = sendMessage(s_local, buffer, strlen(buffer) + 1)) != 0) {
+        perror("SERVIDOR: Error al enviar el resultado al cliente");
+    }
+
+    // Liberar recursos
+    freeParsedMessage(&parsedMessage);
+    close(s_local);
+    pthread_exit(&ret);
 }
 
 

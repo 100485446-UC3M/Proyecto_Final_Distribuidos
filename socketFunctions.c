@@ -7,7 +7,7 @@ int parseMessage(int socket, ParsedMessage *parsedMessage) {
     char buffer[256];
     ssize_t bytesRead;
 
-    // Leer el mensaje completo desde el socket
+    // Leer la primera cadena (acción)
     bytesRead = readLine(socket, buffer, sizeof(buffer));
     if (bytesRead <= 0) {
         perror("Error al leer el mensaje desde el socket");
@@ -20,10 +20,18 @@ int parseMessage(int socket, ParsedMessage *parsedMessage) {
         return ERROR_COMMUNICATION;
     }
 
+     // Asignar la acción
+     parsedMessage->action = strdup(buffer); // Copiar la acción
+     if (parsedMessage->action == NULL) {
+         perror("Error al asignar memoria para la acción");
+         return ERROR_COMMUNICATION;
+     }
+
     // Leer los argumentos (segunda cadena)
     bytesRead = readLine(socket, buffer, sizeof(buffer));
     if (bytesRead < 0) {
         perror("Error al leer los argumentos desde el socket");
+        free(parsedMessage->action); // Liberar memoria en caso de error
         return ERROR_COMMUNICATION;
     }
 
@@ -32,17 +40,21 @@ int parseMessage(int socket, ParsedMessage *parsedMessage) {
         parsedMessage->arguments = strdup(buffer); // Copiar los argumentos
         if (parsedMessage->arguments == NULL) {
             perror("Error al asignar memoria para los argumentos");
+            free(parsedMessage->action); // Liberar memoria en caso de error
             return ERROR_COMMUNICATION;
         }
     } else {
         parsedMessage->arguments = NULL; // No hay argumentos
     }
-
-    return 0; // Éxito
+    return 0;
 }
 
 // Función para liberar la memoria de ParsedMessage
 void freeParsedMessage(ParsedMessage *parsedMessage) {
+    if (parsedMessage->action != NULL) {
+        free(parsedMessage->action);
+        parsedMessage->action = NULL;
+    }
     if (parsedMessage->arguments != NULL) {
         free(parsedMessage->arguments);
         parsedMessage->arguments = NULL;
@@ -133,6 +145,39 @@ void free_user_list() {
 
     pthread_mutex_unlock(&userList.mutex);
     pthread_mutex_destroy(&userList.mutex);
+}
+
+int is_user_connected(const char *username) {
+    pthread_mutex_lock(&userList.mutex);
+
+    UserNode *current = userList.head;
+    while (current != NULL) {
+        if (strcmp(current->username, username) == 0 && current->connected) {
+            pthread_mutex_unlock(&userList.mutex);
+            return 1; // Usuario conectado
+        }
+        current = current->next;
+    }
+
+    pthread_mutex_unlock(&userList.mutex);
+    return 0; // Usuario no conectado
+}
+int register_connection(const char *username, int port) {
+    pthread_mutex_lock(&userList.mutex);
+
+    UserNode *current = userList.head;
+    while (current != NULL) {
+        if (strcmp(current->username, username) == 0) {
+            current->connected = 1; // Marcar como conectado
+            current->port = port;   // Guardar el puerto
+            pthread_mutex_unlock(&userList.mutex);
+            return 0; // Conexión exitosa
+        }
+        current = current->next;
+    }
+
+    pthread_mutex_unlock(&userList.mutex);
+    return -1; // Usuario no encontrado
 }
 
 // Función para enviar un mensaje carácter por carácter
