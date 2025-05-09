@@ -174,7 +174,7 @@ int is_user_connected(const char *username) {
     pthread_mutex_unlock(&userList.mutex);
     return 0; // Usuario no conectado
 }
-int register_connection(const char *username, int port) {
+int register_connection(const char *username, int port, int client_socket) {
     pthread_mutex_lock(&userList.mutex);
 
     UserNode *current = userList.head;
@@ -182,6 +182,15 @@ int register_connection(const char *username, int port) {
         if (strcmp(current->username, username) == 0) {
             current->connected = 1; // Marcar como conectado
             current->port = port;   // Guardar el puerto
+            // Obtener la dirección IP del cliente
+            struct sockaddr_in client_addr;
+            socklen_t addr_len = sizeof(client_addr);
+            if (getpeername(client_socket, (struct sockaddr *)&client_addr, &addr_len) == 0) {
+                current->ip = client_addr.sin_addr; // Guardar la IP
+            } else {
+                perror("Error al obtener la dirección IP del cliente");
+            }
+
             pthread_mutex_unlock(&userList.mutex);
             return 0; // Conexión exitosa
         }
@@ -253,46 +262,69 @@ int delete_publication(const char *file_name) {
     return -1; // Archivo no encontrado
 }
 
-// Función para enviar un mensaje carácter por carácter
-int sendMessage(int socket, char * buffer, int len){
-    int r;
-    int l = len;
-    do {
-        r = write(socket, buffer, 1);
-        l -= r;
-        buffer += r;
-    } while ((l>0) && (r>=0));
 
-    if (r < 0){
-        close(socket);
-        perror("Error al enviar la petición");
-        return -2;
-    }
-    else {
-        return 0;
+void get_ListUsers(char *buffer, size_t buffer_size) {
+    pthread_mutex_lock(&userList.mutex);
+
+    UserNode *current = userList.head;
+    size_t offset = 0;
+
+    // Inicializar el buffer
+    memset(buffer, 0, buffer_size);
+
+    // Recorrer la lista de usuarios conectados
+    while (current != NULL) {
+        if (current->connected) {
+            char user_info[512];
+            char ip_buffer[INET_ADDRSTRLEN];
+
+            // Convertir la dirección IP a formato legible
+            inet_ntop(AF_INET, &current->ip, ip_buffer, INET_ADDRSTRLEN);
+
+            // Formatear la información del usuario
+            snprintf(user_info, sizeof(user_info), "User: %s, IP: %s, Port: %d\n",
+                     current->username, ip_buffer, current->port);
+
+            // Verificar que el buffer no se desborde
+            if (offset + strlen(user_info) < buffer_size) {
+                strcat(buffer, user_info);
+                offset += strlen(user_info);
+            } else {
+                break; // Detener si el buffer está lleno
+            }
+        }
+        current = current->next;
     }
 
+    pthread_mutex_unlock(&userList.mutex);
 }
 
-// Función para recibir un mensaje carácter por carácter
-int recvMessage(int socket, char * buffer, int len){
-    int r;
-    int l = len;
-    // leer los datos byte a byte
-    do {
-        r = read(socket, buffer, 1);
-        l -= r;
-        buffer += r;
-    } while ((l>0) && (r>=0));
-
-    if (r < 0){
+int sendByte(int socket, char byte) {
+    int bytesSent = write(socket, &byte, 1);
+    if (bytesSent < 0) {
+        perror("Error al enviar el byte");
         close(socket);
-        perror("Error al recuperar la respuesta");
-        return -2;
+        return -2; // Error al enviar
     }
-    else {
-        return 0;
+    return 0; // Envío exitoso
+}
+
+// Función para enviar cadenas
+int sendMessage(int socket, char *buffer, int len) {
+    int totalSent = 0; // Total de bytes enviados
+    int bytesSent;
+
+    while (totalSent < len) {
+        bytesSent = write(socket, buffer + totalSent, len - totalSent);
+        if (bytesSent < 0) {
+            perror("Error al enviar la petición");
+            close(socket);
+            return -2; // Error al enviar
+        }
+        totalSent += bytesSent;
     }
+
+    return 0; // Envío exitoso
 }
 
 // Función para leer una línea desde un socket

@@ -10,6 +10,7 @@ PublicationList publicationList = {NULL, PTHREAD_MUTEX_INITIALIZER};
 
 // Función ejecutado por cada hilo para atender petición del cliente
 void * SendResponse(void * sc){
+    int already_sent = 0;
     printf("Entramos al hilo\n");
     int s_local;
     int ret;
@@ -74,7 +75,7 @@ void * SendResponse(void * sc){
                 ret = 1; // Usuario no existe
             } else if (is_user_connected(parsedMessage.UserName)) {
                 ret = 2; // Usuario ya conectado
-            } else if (register_connection(parsedMessage.UserName, client_port) == 0) {
+            } else if (register_connection(parsedMessage.UserName, client_port, s_local) == 0) {
                 ret = 0; // Conexión exitosa
             } else {
                 ret = 3; // Error al registrar la conexión
@@ -145,15 +146,40 @@ void * SendResponse(void * sc){
                 }
             }
         }
+    } else if (strcmp(parsedMessage.action, "LIST_USERS") == 0) {
+        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
+        if (parsedMessage.UserName == NULL) {
+            perror("SERVIDOR: Username faltantes para LIST");
+            ret = 3; // Error en la comunicación
+        } else if (!is_user_registered(parsedMessage.UserName)) {
+            ret = 1; // Usuario no existe
+        } else if (!is_user_connected(parsedMessage.UserName)) {
+            ret = 2; // Usuario no conectado
+        } else {
+            // Enviar el código de éxito (0) primero
+            snprintf(buffer, sizeof(buffer), "%d", 0);
+            if (sendByte(s_local, ret) != 0)  {
+                perror("SERVIDOR: Error al enviar el código de éxito");
+                ret = 3; // Error en la comunicación
+            } else {
+                already_sent = 1; // Marcar como ya enviado
+                char user_list[1024];
+                get_ListUsers(user_list, sizeof(user_list));
+
+                // Enviar la lista de usuarios conectados al cliente
+                if (sendMessage(s_local, user_list, strlen(user_list) + 1) != 0) {
+                    perror("SERVIDOR: Error al enviar la lista de usuarios");
+                    ret = 3; // Error en la comunicación
+                } 
+            }
+        }
     } else {
         perror("SERVIDOR: No existe la acción requerida");
         ret = ERROR_COMMUNICATION;
     }
 
     // Enviar respuesta al cliente
-
-    snprintf(buffer, sizeof(buffer), "%d", ret);
-    if ((ret = sendMessage(s_local, buffer, strlen(buffer) + 1)) != 0) {
+    if (sendByte(s_local, ret) != 0 && already_sent == 0) {
         perror("SERVIDOR: Error al enviar el resultado al cliente");
     }
 
@@ -221,7 +247,6 @@ int main(int argc, char * argv[]) {
     }
     char local_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &local_addr.sin_addr, local_ip, INET_ADDRSTRLEN);
-
     // Mostrar mensaje de inicio
     printf("s > init server %s:%ld\n", local_ip, port);
 

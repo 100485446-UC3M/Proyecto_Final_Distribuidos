@@ -30,6 +30,7 @@ ssize_t readLine(int socket, char *buffer, size_t n);
 typedef struct UserNode {
     char username[256];           // Nombre del usuario
     int connected;                // Estado de conexión (0 = desconectado, 1 = conectado)
+    struct in_addr ip;                     // Dirección IP del cliente
     int port;                     // Puerto del cliente
     struct UserNode *next;        // Puntero al siguiente nodo
 } UserNode;
@@ -64,12 +65,13 @@ int register_user(const char *username);
 int unregister_user(const char *username);
 void free_user_list();
 int is_user_connected(const char *username);
-int register_connection(const char *username, int port);
+int register_connection(const char *username, int port, int client_socket);
 int is_file_published(const char *file_name);
 int register_publication(const char *username, const char *file_name, const char *description);
 int delete_publication(const char *file_name);
+int sendByte(int socket, char byte);
 int sendMessage(int socket, char *buffer, int len);
-int recvMessage(int socket, char *buffer, int len);
+void get_ListUsers(char *buffer, size_t buffer_size);
 ssize_t readLine(int socket, char *buffer, size_t n);
 int parseMessage(int socket, ParsedMessage *parsedMessage);
 void freeParsedMessage(ParsedMessage *parsedMessage);
