@@ -22,6 +22,7 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
 
      // Asignar la acción
      parsedMessage->action = strdup(buffer); // Copiar la acción
+     printf("UserName: %s\n", parsedMessage->UserName);
      if (parsedMessage->action == NULL) {
          perror("Error al asignar memoria para la acción");
          return ERROR_COMMUNICATION;
@@ -35,6 +36,7 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
         return ERROR_COMMUNICATION;
     }
     parsedMessage->UserName = strdup(buffer); // Copiar los argumentos
+    printf("UserName: %s\n", parsedMessage->UserName);
     if (parsedMessage->UserName == NULL) {
         perror("Error al asignar memoria para los argumentos");
         free(parsedMessage->action); // Liberar memoria en caso de error

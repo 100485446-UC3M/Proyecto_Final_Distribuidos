@@ -25,19 +25,20 @@ void * SendResponse(void * sc){
         pthread_exit(&ret);
     }
     // Procesar la solicitud
+    printf("Acción: %s\n", parsedMessage->action);
     if (strcmp(parsedMessage.action, "REGISTER") == 0) {
-            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
+        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
 
-            if (parsedMessage.UserName == NULL) {
-                perror("SERVIDOR: Username faltantes para REGISTER");
-                ret = 2; // Error en la comunicación
-            }else if(is_user_registered(parsedMessage.UserName)) {
-                ret = 1; // Usuario ya registrado
-            } else if (register_user(parsedMessage.UserName) == 0) {
-                ret = 0; // Registro exitoso
-            } else {
-                ret = 2; // Error en el registro
-            }
+        if (parsedMessage.UserName == NULL) {
+            perror("SERVIDOR: Username faltantes para REGISTER");
+            ret = 2; // Error en la comunicación
+        }else if(is_user_registered(parsedMessage.UserName)) {
+            ret = 1; // Usuario ya registrado
+        } else if (register_user(parsedMessage.UserName) == 0) {
+            ret = 0; // Registro exitoso
+        } else {
+            ret = 2; // Error en el registro
+        }
     } else if (strcmp(parsedMessage.action, "UNREGISTER") == 0) {
 
         printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);

@@ -28,7 +28,8 @@ def main():
         sys.exit(1)
 
     # Bucle para enviar solicitudes
-    try:          
+    try:     
+        while True:     
             # Leer la solicitud del usuario
             user_input = input("Ingrese su solicitud: ").strip()
             
