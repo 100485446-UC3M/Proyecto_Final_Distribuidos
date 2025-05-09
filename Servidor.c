@@ -38,27 +38,27 @@ void * SendResponse(void * sc){
             } else {
                 ret = 2; // Error en el registro
             }
-        } else if (strcmp(parsedMessage.action, "UNREGISTER") == 0) {
+    } else if (strcmp(parsedMessage.action, "UNREGISTER") == 0) {
 
-            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
+        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
 
-            if (parsedMessage.UserName == NULL) {
-                perror("SERVIDOR: Username faltantes para UNREGISTER");
-                ret = 2; // Error en la comunicación
-            }else if (!is_user_registered(parsedMessage.UserName)) {
-                ret = 1; // Usuario no existe
-            } else if (unregister_user(parsedMessage.UserName) == 0) {
-                ret = 0; // Baja exitosa
-            } else {
-                ret = 2; // Error al eliminar
-            }
-        } else if (strcmp(parsedMessage.action, "CONNECT") == 0) {
-            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
+        if (parsedMessage.UserName == NULL) {
+            perror("SERVIDOR: Username faltantes para UNREGISTER");
+            ret = 2; // Error en la comunicación
+        }else if (!is_user_registered(parsedMessage.UserName)) {
+            ret = 1; // Usuario no existe
+        } else if (unregister_user(parsedMessage.UserName) == 0) {
+            ret = 0; // Baja exitosa
+        } else {
+            ret = 2; // Error al eliminar
+        }
+    } else if (strcmp(parsedMessage.action, "CONNECT") == 0) {
+        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
 
-            if (parsedMessage.UserName == NULL) {
-                perror("SERVIDOR: Username faltantes para CONNECT");
-                ret = 3; // Error en la comunicación
-            } else {
+        if (parsedMessage.UserName == NULL) {
+            perror("SERVIDOR: Username faltantes para CONNECT");
+            ret = 3; // Error en la comunicación
+        } else {
             // Leer el puerto del cliente
             ssize_t bytesRead;
             memset(buffer, 0, sizeof(buffer));
@@ -67,21 +67,21 @@ void * SendResponse(void * sc){
                 perror("SERVIDOR: Error al leer el puerto del cliente");
                 ret = 3; // Error en la comunicación
             } else {
-            int client_port = atoi(buffer);
-            if (client_port < 1024 || client_port > 49151) {
-                perror("SERVIDOR: Puerto inválido recibido del cliente");
-                ret = 3; // Error en la comunicación
-            } else if (!is_user_registered(parsedMessage.UserName)) {
-                ret = 1; // Usuario no existe
-            } else if (is_user_connected(parsedMessage.UserName)) {
-                ret = 2; // Usuario ya conectado
-            } else if (register_connection(parsedMessage.UserName, client_port, s_local) == 0) {
-                ret = 0; // Conexión exitosa
-            } else {
-                ret = 3; // Error al registrar la conexión
+                int client_port = atoi(buffer);
+                if (client_port < 1024 || client_port > 49151) {
+                    perror("SERVIDOR: Puerto inválido recibido del cliente");
+                    ret = 3; // Error en la comunicación
+                } else if (!is_user_registered(parsedMessage.UserName)) {
+                    ret = 1; // Usuario no existe
+                } else if (is_user_connected(parsedMessage.UserName)) {
+                    ret = 2; // Usuario ya conectado
+                } else if (register_connection(parsedMessage.UserName, client_port, s_local) == 0) {
+                    ret = 0; // Conexión exitosa
+                } else {
+                    ret = 3; // Error al registrar la conexión
+                }
             }
-        }
-    } 
+        } 
     } else if (strcmp(parsedMessage.action, "PUBLISH") == 0) {
         printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
 
@@ -233,7 +233,7 @@ void * SendResponse(void * sc){
         } else {
         perror("SERVIDOR: No existe la acción requerida");
         ret = ERROR_COMMUNICATION;
-    }
+            }
 
     // Enviar respuesta al cliente
     if (sendByte(s_local, ret) != 0 && already_sent == 0) {
