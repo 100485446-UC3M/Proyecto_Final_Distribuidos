@@ -11,7 +11,7 @@ PublicationList publicationList = {NULL, PTHREAD_MUTEX_INITIALIZER};
 // Función ejecutado por cada hilo para atender petición del cliente
 void * SendResponse(void * sc){
     int already_sent = 0;
-    printf("Entramos al hilo\n");
+    printf("\nEntramos al hilo\n");
     int s_local;
     int ret;
     s_local = (* (int *) sc);
@@ -173,7 +173,64 @@ void * SendResponse(void * sc){
                 } 
             }
         }
+    } else if (strcmp(parsedMessage.action, "LIST_CONTENT") == 0){
+        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
+
+    if (parsedMessage.UserName == NULL || parsedMessage.arguments == NULL) {
+        perror("SERVIDOR: Faltan argumentos para LIST_CONTENT");
+        ret = 4; // Error en la comunicación
+    } else if (!is_user_registered(parsedMessage.UserName)) {
+        ret = 1; // Usuario que realiza la operación no existe
+    } else if (!is_user_connected(parsedMessage.UserName)) {
+        ret = 2; // Usuario que realiza la operación no está conectado
+    } else if (!is_user_registered(parsedMessage.arguments)) {
+        ret = 3; // Usuario cuyo contenido se quiere conocer no existe
     } else {
+        // Obtener la lista de publicaciones del usuario objetivo
+        char publication_list[1024];
+        memset(publication_list, 0, sizeof(publication_list));
+        int num_files = get_publications(parsedMessage.arguments, publication_list, sizeof(publication_list));
+
+        // Enviar el código de éxito (0)
+        if (sendByte(s_local, 0) != 0) {
+            perror("SERVIDOR: Error al enviar el código de éxito");
+            ret = 4; // Error en la comunicación
+        } else {
+            // Enviar el número de publicaciones
+            snprintf(buffer, sizeof(buffer), "%d", num_files);
+            if (sendMessage(s_local, buffer, strlen(buffer) + 1) != 0) {
+                perror("SERVIDOR: Error al enviar el número de publicaciones");
+                ret = 4; // Error en la comunicación
+            } else {
+                // Enviar la lista de publicaciones
+                if (sendMessage(s_local, publication_list, strlen(publication_list) + 1) != 0) {
+                    perror("SERVIDOR: Error al enviar la lista de publicaciones");
+                    ret = 4; // Error en la comunicación
+                } else {
+                    ret = 0; // Operación exitosa
+                    }
+                }
+            }  
+        }
+    } else if (strcmp(parsedMessage.action, "DISCONNECT") == 0) {
+        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
+    
+        if (parsedMessage.UserName == NULL) {
+            perror("SERVIDOR: Username faltantes para DISCONNECT");
+            ret = 3; // Error en la comunicación
+        } else if (!is_user_registered(parsedMessage.UserName)) {
+            ret = 1; // Usuario no existe
+        } else if (!is_user_connected(parsedMessage.UserName)) {
+            ret = 2; // Usuario no conectado
+        } else {
+            // Desconectar al usuario
+            if (unregister_connection(parsedMessage.UserName) == 0) {
+                ret = 0; // Desconexión exitosa
+            } else {
+                ret = 3; // Error al desconectar
+                }
+            }
+        } else {
         perror("SERVIDOR: No existe la acción requerida");
         ret = ERROR_COMMUNICATION;
     }
@@ -262,8 +319,8 @@ int main(int argc, char * argv[]) {
     size = sizeof(client_addr);
 
     // Bucle infinito para manejar las solicitudes
+    printf("SERVIDOR: Esperando conexión\n");
     while (1) {
-        printf("SERVIDOR: Esperando conexión\n");
         // Aceptar conexión del cliente
         if ((sc = accept(ss, (struct sockaddr *) &client_addr, &size)) < 0){
             perror("SERVIDOR: Error al tratar de aceptar conexión\n");

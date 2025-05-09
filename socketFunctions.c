@@ -299,6 +299,52 @@ void get_ListUsers(char *buffer, size_t buffer_size) {
     pthread_mutex_unlock(&userList.mutex);
 }
 
+int get_publications(const char *username, char *buffer, size_t buffer_size) {
+    pthread_mutex_lock(&publicationList.mutex);
+
+    PublicationNode *current = publicationList.head;
+    size_t offset = 0;
+    int count = 0;
+
+    // Recorrer la lista de publicaciones
+    while (current != NULL) {
+        if (strcmp(current->username, username) == 0) {
+            char publication_info[256];
+            snprintf(publication_info, sizeof(publication_info), "%.*s\n", (int)(sizeof(publication_info) - 2), current->file_name);
+
+            // Verificar que el buffer no se desborde
+            if (offset + strlen(publication_info) < buffer_size) {
+                strcat(buffer, publication_info);
+                offset += strlen(publication_info);
+                count++;
+            } else {
+                break; // Detener si el buffer está lleno
+            }
+        }
+        current = current->next;
+    }
+
+    pthread_mutex_unlock(&publicationList.mutex);
+    return count; // Retornar el número de publicaciones
+}
+
+int unregister_connection(const char *username) {
+    pthread_mutex_lock(&userList.mutex);
+
+    UserNode *current = userList.head;
+    while (current != NULL) {
+        if (strcmp(current->username, username) == 0) {
+            current->connected = 0; // Marcar como desconectado
+            pthread_mutex_unlock(&userList.mutex);
+            return 0; // Desconexión exitosa
+        }
+        current = current->next;
+    }
+
+    pthread_mutex_unlock(&userList.mutex);
+    return -1; // Usuario no encontrado
+}
+
 int sendByte(int socket, char byte) {
     int bytesSent = write(socket, &byte, 1);
     if (bytesSent < 0) {
