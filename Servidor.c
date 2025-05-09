@@ -24,7 +24,7 @@ void * SendResponse(void * sc){
     }
     // Procesar la solicitud
     if (strcmp(parsedMessage.action, "REGISTER") == 0) {
-            printf("OPERATION %c FROM %s\n", parsedMessage.action, parsedMessage.arguments);
+            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.arguments);
 
             if (parsedMessage.arguments == NULL) {
                 perror("SERVIDOR: Argumentos faltantes para REGISTER");
@@ -38,7 +38,7 @@ void * SendResponse(void * sc){
             }
         } else if (strcmp(parsedMessage.action, "UNREGISTER") == 0) {
 
-            printf("OPERATION %c FROM %s\n", parsedMessage.action, parsedMessage.arguments);
+            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.arguments);
 
             if (parsedMessage.arguments == NULL) {
                 perror("SERVIDOR: Argumentos faltantes para UNREGISTER");
@@ -51,19 +51,19 @@ void * SendResponse(void * sc){
                 ret = 2; // Error al eliminar
             }
         } else if (strcmp(parsedMessage.action, "CONNECT") == 0) {
-            printf("OPERATION %c FROM %s\n", parsedMessage.action, parsedMessage.arguments ? parsedMessage.arguments : "N/A");
+            printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.arguments ? parsedMessage.arguments : "N/A");
 
             if (parsedMessage.arguments == NULL) {
                 perror("SERVIDOR: Argumentos faltantes para CONNECT");
                 ret = 3; // Error en la comunicación
-                break;
             } else {
             // Leer el puerto del cliente
+            ssize_t bytesRead;
+            memset(buffer, 0, sizeof(buffer));
             bytesRead = readLine(s_local, buffer, sizeof(buffer));
             if (bytesRead <= 0) {
                 perror("SERVIDOR: Error al leer el puerto del cliente");
                 ret = 3; // Error en la comunicación
-                break;
             } else {
             int client_port = atoi(buffer);
             if (client_port < 1024 || client_port > 49151) {
@@ -158,7 +158,7 @@ int main(int argc, char * argv[]) {
     inet_ntop(AF_INET, &local_addr.sin_addr, local_ip, INET_ADDRSTRLEN);
 
     // Mostrar mensaje de inicio
-    printf("s > init server %s:%d\n", local_ip, port);
+    printf("s > init server %s:%ld\n", local_ip, port);
 
     // Inicializar variable global de control (busy)
     busy = 1;

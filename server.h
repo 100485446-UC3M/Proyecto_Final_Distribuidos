@@ -49,6 +49,8 @@ int is_user_registered(const char *username);
 int register_user(const char *username);
 int unregister_user(const char *username);
 void free_user_list();
+int is_user_connected(const char *username);
+int register_connection(const char *username, int port);
 int sendMessage(int socket, char *buffer, int len);
 int recvMessage(int socket, char *buffer, int len);
 ssize_t readLine(int socket, char *buffer, size_t n);
