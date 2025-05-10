@@ -52,12 +52,13 @@ class client :
     @staticmethod
     def  connect(user) :
         if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):
-            if (client._user != user):
+            if (client._user is not None) and (client._user != user):
                 client.disconnect(client._user)
-            # review
-            client._user = user
             msg = protocol.connect(client._server, client._port, user)
             print(msg)
+            if msg == "CONNECT OK":
+                # en caso de una conexión exitosa, cambiamos el nombre de usuario actualmente conectado
+                client._user = user
         else:
             settings = protocol.SETTINGS['connect']
             print(settings[settings['default']])
@@ -65,8 +66,10 @@ class client :
 
     @staticmethod
     def  disconnect(user) :
+        # toda desconexión implica borrar el nombre del usuario conectado actualmente
+        client._user = None
         if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
-            msg = protocol.connect(client._server, client._port, user)
+            msg = protocol.disconnect(client._server, client._port, user)
             print(msg)
         else:
             settings = protocol.SETTINGS['disconnect']

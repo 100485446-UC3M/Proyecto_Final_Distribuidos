@@ -100,7 +100,6 @@ def recv_str(sock: socket.socket) -> str:
 
 def recv_byte(sock: socket.socket) -> int:
     b = sock.recv(1)
-    print(b)
     if not b:
         raise ConnectionError('No se recibió el código de resultado')
     # acceder a un elemento del objeto bytes devuelve el valor entero de ese byte
@@ -117,7 +116,6 @@ def communicate_with_server(server: str, port: int, list_str: list, default_erro
                 send_str(sock, string)
             # devolvemos el código recibido
             code = recv_byte(sock)
-            print(code)
             return code
             
     # si hay cualquier tipo de error en el cliente, se devuelve el valor predeterminado de error
@@ -148,7 +146,6 @@ def connect(server: str, port: int, user: str) -> int:
 
     # Recuperamos el puerto asignado
     _, chosen_port = listener.getsockname()
-    print(f"Puerto libre asignado: {chosen_port}")
 
     # Empieza a escuchar. Permitimos que haya hasta 5 clientes en cola si ya hay uno conectado
     listener.listen(5)
