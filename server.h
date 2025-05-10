@@ -20,7 +20,8 @@
 typedef struct {
     char *action;
     char *UserName;
-    char *arguments;              
+    char *argument1; // Para DELETE, PUBLISH y LIST_CONTENT
+    char *argument2; // Solo para PUBLISH
 } ParsedMessage;
 
 // Estructura para almacenar usuario registrados
