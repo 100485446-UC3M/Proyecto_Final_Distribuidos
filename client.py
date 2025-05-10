@@ -65,9 +65,14 @@ class client :
 
     @staticmethod
     def  disconnect(user) :
-        #  todo
-        return client.RC.ERROR
-    
+        if (client._state == client.State.CONNECTED) and (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
+            msg = protocol.connect(client._server, client._port, user)
+            print(msg)
+            if msg == "DISCONNECT OK":
+                client._state = client.State.REGISTERED
+        else:
+            settings = protocol.SETTINGS['disconnect']
+            print(settings[settings['default']])
 
     @staticmethod
     def  publish(fileName,  description) :
@@ -169,6 +174,7 @@ class client :
 
                     elif(line[0]=="QUIT") :
                         if (len(line) == 1) :
+                            # todo: Esta operaci´on de desconexi´on deber´a realizarse siempre que el usuario introduzca por consola el comando QUIT.
                             break
                         else :
                             print("Syntax error. Use: QUIT")
