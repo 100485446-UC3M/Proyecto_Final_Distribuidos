@@ -100,6 +100,7 @@ def recv_str(sock: socket.socket) -> str:
 
 def recv_byte(sock: socket.socket) -> int:
     b = sock.recv(1)
+    print(b)
     if not b:
         raise ConnectionError('No se recibió el código de resultado')
     # acceder a un elemento del objeto bytes devuelve el valor entero de ese byte
@@ -109,14 +110,16 @@ def communicate_with_server(server: str, port: int, list_str: list, default_erro
     try:
         # with asegura cerrar el socket después de salir de él
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # timeout de 5 segundos para que si hay un fallo en las operaciones bloqueantes, el programa no quede bloqueado indefinidamente
-            sock.settimeout(5)
+            # timeout de 10 segundos para que si hay un fallo en las operaciones bloqueantes, el programa no quede bloqueado indefinidamente
+            sock.settimeout(10)
             sock.connect((server, port))
             # envíamos todas las cadenas necesarias al servidor
             for string in list_str:
                 send_str(sock, string)
             # devolvemos el código recibido
-            return recv_byte(sock)
+            code = recv_byte(sock)
+            print(code)
+            return code
             
     # si hay cualquier tipo de error en el cliente, se devuelve el valor predeterminado de error
     except (socket.error, ValueError, ConnectionError, OSError, TimeoutError, UnicodeError) as e:
@@ -171,5 +174,13 @@ def connect(server: str, port: int, user: str) -> int:
     # mandamos solicitud de conexión al servidor
     settings = SETTINGS['connect']
     code = communicate_with_server(server, port, ["CONNECT", user, str(chosen_port)], settings['default'])
+    return settings.get(code, settings[settings['default']])
+
+def disconnect(server: str, port: int, user: str) -> int:
+    
+
+    # mandamos solicitud de desconexión al servidor
+    settings = SETTINGS['disconnect']
+    code = communicate_with_server(server, port, ["DISCONNECT", user], settings['default'])
     return settings.get(code, settings[settings['default']])
     
