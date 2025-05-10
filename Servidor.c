@@ -92,7 +92,7 @@ void * SendResponse(void * sc){
             ret = 4; // Error en la comunicación
         } else {
             if (parsedMessage.argument1 == NULL || parsedMessage.argument2 == NULL) {
-                perror("SERVIDOR: Error al leer el nombre del archivo");
+                perror("SERVIDOR: Error al leer el nombre y descripción del archivo");
                 ret = 4; // Error en la comunicación
             } else {
                 char file_name[256];

@@ -28,6 +28,30 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
          return ERROR_COMMUNICATION;
      }
 
+    /*
+    // Leer la fecha de servicio web
+    bytesRead = readLine(socket, buffer, sizeof(buffer));
+    if (bytesRead <= 0) {
+        perror("Error al leer el mensaje desde el socket");
+        return ERROR_COMMUNICATION;
+    }
+
+    // Validar que el mensaje tenga al menos un carácter para la fecha
+    if (bytesRead < 1 || !isprint(buffer[0])) {
+        perror("Mensaje inválido: no contiene una acción válida");
+        return ERROR_COMMUNICATION;
+    }
+
+     // Asignar la acción
+     parsedMessage->fecha = strdup(buffer); // Copiar la acción
+     //printf("UserName: %s\n", parsedMessage->UserName);
+     if (parsedMessage->fecha == NULL) {
+         perror("Error al asignar memoria para la acción");
+         return ERROR_COMMUNICATION;
+     }
+     
+    */
+
     // Leer el nombre de usuario
     bytesRead = readLine(socket, buffer, sizeof(buffer));
     if (bytesRead < 0) {
