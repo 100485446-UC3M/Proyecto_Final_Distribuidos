@@ -23,9 +23,6 @@ typedef struct {
     char *arguments;              
 } ParsedMessage;
 
-// Inicialización de función de lectura
-ssize_t readLine(int socket, char *buffer, size_t n);
-
 // Estructura para almacenar usuario registrados
 typedef struct UserNode {
     char username[256];           // Nombre del usuario

@@ -76,6 +76,7 @@ void freeParsedMessage(ParsedMessage *parsedMessage) {
 }
 
 void initializeUserList() {
+    printf("Entre a initializeUserList\n");
     userList.head = NULL;
     pthread_mutex_init(&userList.mutex, NULL);
 }
@@ -84,16 +85,18 @@ void initializeUserList() {
 // Función para verificar si un usuario ya está registrado
 int is_user_registered(const char *username) {
     pthread_mutex_lock(&userList.mutex);
-
+    printf("Entre a is_user_registered\n");
     UserNode *current = userList.head;
     while (current != NULL) {
         if (strcmp(current->username, username) == 0) {
             pthread_mutex_unlock(&userList.mutex);
+            printf("Sali de is_user_registered: 1\n");
             return 1; // Usuario encontrado
         }
         current = current->next;
     }
     pthread_mutex_unlock(&userList.mutex);
+    printf("Sali de is_user_registered: 0\n");
     return 0; // Usuario no encontrado
 }
 

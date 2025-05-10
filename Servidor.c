@@ -27,18 +27,21 @@ void * SendResponse(void * sc){
     // Procesar la solicitud
     if (strcmp(parsedMessage.action, "REGISTER") == 0) {
         printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
-
         if (parsedMessage.UserName == NULL) {
             perror("SERVIDOR: Username faltantes para REGISTER");
             ret = 2; // Error en la comunicación
-        }else if(is_user_registered(parsedMessage.UserName)) {
-            ret = 1; // Usuario ya registrado
-        } else if (register_user(parsedMessage.UserName) == 0) {
-            ret = 0; // Registro exitoso
         } else {
-            ret = 2; // Error en el registro
+            printf("Estoy en el bloque if \n");
+            int is_registered = is_user_registered(parsedMessage.UserName); 
+            if (is_registered == 1) {
+                ret = 1; // Usuario ya registrado
+            } else if (is_registered == 0 && register_user(parsedMessage.UserName) == 0) {
+                ret = 0; // Registro exitoso
+            } else {
+                ret = 2; // Error en el registro
+            }
         }
-        printf("%d",ret);
+        printf("%d", ret);
     } else if (strcmp(parsedMessage.action, "UNREGISTER") == 0) {
 
         printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
@@ -289,7 +292,6 @@ int main(int argc, char * argv[]) {
         perror("SERVIDOR: Error al asignar dirección al socket\n");
         goto cleanup_servidor;
     }
-    initializeUserList();
     // Escuchar conexiones entrantes
     if (listen(ss, SOMAXCONN) != 0){
         perror("SERVIDOR: Error al habilitar el socket para recibir conexiones\n");
@@ -320,6 +322,8 @@ int main(int argc, char * argv[]) {
     pthread_attr_setdetachstate(&thread_attr, PTHREAD_CREATE_DETACHED);   
 
     size = sizeof(client_addr);
+
+    initializeUserList();
 
     // Bucle infinito para manejar las solicitudes
     printf("SERVIDOR: Esperando conexión\n");
