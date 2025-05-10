@@ -20,13 +20,37 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
         return ERROR_COMMUNICATION;
     }
 
-     // Asignar la accións
+     // Asignar la acción
      parsedMessage->action = strdup(buffer); // Copiar la acción
      //printf("UserName: %s\n", parsedMessage->UserName);
      if (parsedMessage->action == NULL) {
          perror("Error al asignar memoria para la acción");
          return ERROR_COMMUNICATION;
      }
+
+    /*
+    // Leer la fecha de servicio web
+    bytesRead = readLine(socket, buffer, sizeof(buffer));
+    if (bytesRead <= 0) {
+        perror("Error al leer el mensaje desde el socket");
+        return ERROR_COMMUNICATION;
+    }
+
+    // Validar que el mensaje tenga al menos un carácter para la fecha
+    if (bytesRead < 1 || !isprint(buffer[0])) {
+        perror("Mensaje inválido: no contiene una acción válida");
+        return ERROR_COMMUNICATION;
+    }
+
+     // Asignar la acción
+     parsedMessage->fecha = strdup(buffer); // Copiar la acción
+     //printf("UserName: %s\n", parsedMessage->UserName);
+     if (parsedMessage->fecha == NULL) {
+         perror("Error al asignar memoria para la acción");
+         return ERROR_COMMUNICATION;
+     }
+     
+    */
 
     // Leer el nombre de usuario
     bytesRead = readLine(socket, buffer, sizeof(buffer));
@@ -36,32 +60,63 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
         return ERROR_COMMUNICATION;
     }
     parsedMessage->UserName = strdup(buffer); // Copiar los argumentos
-    printf("UserName: %s\n", parsedMessage->UserName);
     if (parsedMessage->UserName == NULL) {
         perror("Error al asignar memoria para los argumentos");
         free(parsedMessage->action); // Liberar memoria en caso de error
         return ERROR_COMMUNICATION;
     }
-    /*
-   // Leer otros argumentos (opcional)
-   if (strcmp(parsedMessage->action, "PUBLISH")){
-        bytesRead = readLine(socket, buffer, sizeof(buffer));
 
-        if (bytesRead > 0) {
-            parsedMessage->arguments = strdup(buffer);
-            if (parsedMessage->arguments == NULL) {
-                perror("Error al asignar memoria para los argumentos");
-                free(parsedMessage->action);
-                free(parsedMessage->UserName);
-                return ERROR_COMMUNICATION;
-            }
-        } else {
-            parsedMessage->arguments = NULL;
-        }
-   }
-    */
-   return 0;
+    if (strcmp(parsedMessage->action, "REGISTER") == 0 || strcmp(parsedMessage->action, "UNREGISTER") == 0
+    || strcmp(parsedMessage->action, "CONNECT") == 0 || strcmp(parsedMessage->action, "LIST_USERS") == 0 
+    || strcmp(parsedMessage->action, "DISCONNECT") == 0) {
+        parsedMessage->argument1 = NULL; // No hay argumentos adicionales
+        parsedMessage->argument2 = NULL;
+        return 0;
+    }
+   
+   // Leer otros argumento para DELETE, PUBLISH y LIST_CONTENT
+    bytesRead = readLine(socket, buffer, sizeof(buffer));
+    if (bytesRead < 0) {
+        perror("Error al leer los argumentos desde el socket");
+        free(parsedMessage->action); // Liberar memoria en caso de error
+        free(parsedMessage->UserName); 
+        return ERROR_COMMUNICATION;
+    }
+    parsedMessage->argument1 = strdup(buffer); // Copiar los argumentos
+    if (parsedMessage->argument1 == NULL) {
+        perror("Error al asignar memoria para los argumentos");
+        free(parsedMessage->action); // Liberar memoria en caso de error
+        free(parsedMessage->UserName);
+        return ERROR_COMMUNICATION;
+    }
+
+    if (strcmp(parsedMessage->action, "DELETE") || strcmp(parsedMessage->action, "LIST_CONTENT") == 0) {
+        parsedMessage->argument2 = NULL; // No hay argumentos adicionales
+        return 0;
+    } 
+
+    // Leer otros argumento para PUBLISH
+    
+    bytesRead = readLine(socket, buffer, sizeof(buffer));
+    if (bytesRead < 0) {
+        perror("Error al leer los argumentos desde el socket");
+        free(parsedMessage->action); // Liberar memoria en caso de error
+        free(parsedMessage->UserName);
+        free(parsedMessage->argument1); 
+        return ERROR_COMMUNICATION;
+    }
+    parsedMessage->argument2 = strdup(buffer); // Copiar los argumentos
+    if (parsedMessage->argument1 == NULL) {
+        perror("Error al asignar memoria para los argumentos");
+        free(parsedMessage->action); // Liberar memoria en caso de error
+        free(parsedMessage->UserName);
+        free(parsedMessage->argument1);
+        return ERROR_COMMUNICATION;
+    }
+
+        return 0;
 }
+
 
 // Función para liberar la memoria de ParsedMessage
 void freeParsedMessage(ParsedMessage *parsedMessage) {
@@ -73,9 +128,13 @@ void freeParsedMessage(ParsedMessage *parsedMessage) {
         free(parsedMessage->UserName);
         parsedMessage->UserName = NULL;
     }
-    if (parsedMessage->arguments != NULL) {
-        free(parsedMessage->arguments);
-        parsedMessage->arguments = NULL;
+    if (parsedMessage->argument1 != NULL) {
+        free(parsedMessage->argument1);
+        parsedMessage->argument1 = NULL;
+    }
+    if (parsedMessage->argument2 != NULL) {
+        free(parsedMessage->argument2);
+        parsedMessage->argument2 = NULL;
     }
 }
 

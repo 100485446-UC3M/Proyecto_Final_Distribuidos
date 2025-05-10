@@ -31,7 +31,6 @@ void * SendResponse(void * sc){
             perror("SERVIDOR: Username faltantes para REGISTER");
             ret = 2; // Error en la comunicación
         } else {
-            printf("Estoy en el bloque if \n");
             int is_registered = is_user_registered(parsedMessage.UserName); 
             if (is_registered == 1) {
                 ret = 1; // Usuario ya registrado
@@ -41,7 +40,6 @@ void * SendResponse(void * sc){
                 ret = 2; // Error en el registro
             }
         }
-        printf("%d", ret);
     } else if (strcmp(parsedMessage.action, "UNREGISTER") == 0) {
 
         printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
@@ -93,34 +91,27 @@ void * SendResponse(void * sc){
             perror("SERVIDOR: Username faltantes para PUBLISH");
             ret = 4; // Error en la comunicación
         } else {
-            if (parsedMessage.arguments == NULL) {
-                perror("SERVIDOR: Error al leer el nombre del archivo");
+            if (parsedMessage.argument1 == NULL || parsedMessage.argument2 == NULL) {
+                perror("SERVIDOR: Error al leer el nombre y descripción del archivo");
                 ret = 4; // Error en la comunicación
             } else {
                 char file_name[256];
-                snprintf(file_name, sizeof(file_name), "%s", parsedMessage.arguments);
+                snprintf(file_name, sizeof(file_name), "%s", parsedMessage.argument1);
                 ssize_t bytesRead;
                 // Leer la descripción
-                memset(parsedMessage.arguments, 0, sizeof(parsedMessage.arguments));
-                bytesRead = readLine(s_local, buffer, sizeof(buffer));
-                if (bytesRead <= 0) {
-                    perror("SERVIDOR: Error al leer la descripción");
-                    ret = 4; // Error en la comunicación
+                char description[256];
+                strncpy(description, parsedMessage.argument2, sizeof(description));
+                // Verificar si el usuario existe
+                if (!is_user_registered(parsedMessage.UserName)) {
+                    ret = 1; // Usuario no existe
+                } else if (!is_user_connected(parsedMessage.UserName)) {
+                    ret = 2; // Usuario no conectado
+                } else if (is_file_published(file_name)) {
+                    ret = 3; // Archivo ya publicado
+                } else if (register_publication(parsedMessage.UserName, file_name, description) == 0) {
+                    ret = 0; // Publicación exitosa
                 } else {
-                    char description[256];
-                    strncpy(description, buffer, sizeof(description));
-                    // Verificar si el usuario existe
-                    if (!is_user_registered(parsedMessage.UserName)) {
-                        ret = 1; // Usuario no existe
-                    } else if (!is_user_connected(parsedMessage.UserName)) {
-                        ret = 2; // Usuario no conectado
-                    } else if (is_file_published(file_name)) {
-                        ret = 3; // Archivo ya publicado
-                    } else if (register_publication(parsedMessage.UserName, file_name, description) == 0) {
-                        ret = 0; // Publicación exitosa
-                    } else {
-                        ret = 4; // Error al registrar la publicación
-                    }
+                    ret = 4; // Error al registrar la publicación
                 }
             }
         }
@@ -131,12 +122,12 @@ void * SendResponse(void * sc){
             perror("SERVIDOR: Username faltantes para DELETE");
             ret = 4; // Error en la comunicación
         } else {
-            if (parsedMessage.arguments == NULL) {
+            if (parsedMessage.argument1 == NULL) {
                 perror("SERVIDOR: Error al leer el nombre del archivo");
                 ret = 4; // Error en la comunicación
             } else {
                 char file_name[256];
-                snprintf(file_name, sizeof(file_name), "%s", parsedMessage.arguments);
+                snprintf(file_name, sizeof(file_name), "%s", parsedMessage.argument1);
                 if (!is_user_registered(parsedMessage.UserName)) {
                     ret = 1; // Usuario no existe
                 } else if (!is_user_connected(parsedMessage.UserName)) {
@@ -180,20 +171,20 @@ void * SendResponse(void * sc){
     } else if (strcmp(parsedMessage.action, "LIST_CONTENT") == 0){
         printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
 
-    if (parsedMessage.UserName == NULL || parsedMessage.arguments == NULL) {
+    if (parsedMessage.UserName == NULL || parsedMessage.argument1 == NULL) {
         perror("SERVIDOR: Faltan argumentos para LIST_CONTENT");
         ret = 4; // Error en la comunicación
     } else if (!is_user_registered(parsedMessage.UserName)) {
         ret = 1; // Usuario que realiza la operación no existe
     } else if (!is_user_connected(parsedMessage.UserName)) {
         ret = 2; // Usuario que realiza la operación no está conectado
-    } else if (!is_user_registered(parsedMessage.arguments)) {
+    } else if (!is_user_registered(parsedMessage.argument1)) {
         ret = 3; // Usuario cuyo contenido se quiere conocer no existe
     } else {
         // Obtener la lista de publicaciones del usuario objetivo
         char publication_list[1024];
         memset(publication_list, 0, sizeof(publication_list));
-        int num_files = get_publications(parsedMessage.arguments, publication_list, sizeof(publication_list));
+        int num_files = get_publications(parsedMessage.argument1, publication_list, sizeof(publication_list));
 
         // Enviar el código de éxito (0)
         if (sendByte(s_local, 0) != 0) {
