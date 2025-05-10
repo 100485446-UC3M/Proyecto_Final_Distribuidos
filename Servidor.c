@@ -25,7 +25,6 @@ void * SendResponse(void * sc){
         pthread_exit(&ret);
     }
     // Procesar la solicitud
-    printf("Acción: %s\n", parsedMessage->action);
     if (strcmp(parsedMessage.action, "REGISTER") == 0) {
         printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
 
@@ -39,6 +38,7 @@ void * SendResponse(void * sc){
         } else {
             ret = 2; // Error en el registro
         }
+        printf("%d",ret);
     } else if (strcmp(parsedMessage.action, "UNREGISTER") == 0) {
 
         printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
@@ -237,10 +237,12 @@ void * SendResponse(void * sc){
             }
 
     // Enviar respuesta al cliente
-    if (sendByte(s_local, ret) != 0 && already_sent == 0) {
-        perror("SERVIDOR: Error al enviar el resultado al cliente");
+    printf("%d",ret);
+    if (already_sent == 0){
+        if (sendByte(s_local, ret) != 0) {
+            perror("SERVIDOR: Error al enviar el resultado al cliente");
+        }
     }
-
     // Liberar recursos
     freeParsedMessage(&parsedMessage);
     close(s_local);
