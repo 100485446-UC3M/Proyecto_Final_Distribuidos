@@ -67,7 +67,7 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
     }
 
     if (strcmp(parsedMessage->action, "DELETE") || strcmp(parsedMessage->action, "LIST_CONTENT") == 0) {
-        parsedMessage->arguments = NULL; // No hay argumentos adicionales
+        parsedMessage->argument2 = NULL; // No hay argumentos adicionales
         return 0;
     } 
 
@@ -89,11 +89,8 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
         free(parsedMessage->argument1);
         return ERROR_COMMUNICATION;
     }
-    if ( strcmp(parsedMessage->action, "PUBLISH") == 0) {
-        parsedMessage->arguments = NULL; // No hay argumentos adicionales
+
         return 0;
-    }
-    return 2; // Error: acción no reconocida
 }
 
 

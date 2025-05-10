@@ -115,7 +115,6 @@ void * SendResponse(void * sc){
                 }
             }
         }
-        }
     } else if (strcmp(parsedMessage.action, "DELETE") == 0) {
         printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName );
     
