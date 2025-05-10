@@ -13,38 +13,36 @@ class client :
         ERROR = 1
         USER_ERROR = 2
 
+    # review
+    """ 
     # clase que contiene los posibles valores de la máquina de estados del cliente
     class State(Enum):
         UNREGISTERED = 0
         REGISTERED   = 1
         CONNECTED    = 2
-
-    _state = State.UNREGISTERED
+    """
 
     # ****************** ATTRIBUTES ******************
     _server = None
     _port = -1
+    _user = None
 
     # ******************** METHODS *******************
 
     @staticmethod
     def  register(user) :
-        if (client._state != client.State.REGISTERED) and (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
+        if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
             msg = protocol.register(client._server, client._port, user)
             print(msg)
-            if msg == "REGISTER OK":
-                client._state = client.State.REGISTERED
         else:
             settings = protocol.SETTINGS['register']
             print(settings[settings['default']])
    
     @staticmethod
     def  unregister(user) :
-        if (client._state != client.State.UNREGISTERED) and (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
+        if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
             msg = protocol.unregister(client._server, client._port, user)
             print(msg)
-            if msg == "UNREGISTER OK":
-                client._state = client.State.UNREGISTERED
         else:
             settings = protocol.SETTINGS['unregister']
             print(settings[settings['default']])
@@ -53,11 +51,13 @@ class client :
     
     @staticmethod
     def  connect(user) :
-        if (client._state == client.State.REGISTERED) and (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
+        if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):
+            if (client._user != user):
+                client.disconnect(client._user)
+            # review
+            client._user = user
             msg = protocol.connect(client._server, client._port, user)
             print(msg)
-            if msg == "CONNECT OK":
-                client._state = client.State.CONNECTED
         else:
             settings = protocol.SETTINGS['connect']
             print(settings[settings['default']])
@@ -65,11 +65,9 @@ class client :
 
     @staticmethod
     def  disconnect(user) :
-        if (client._state == client.State.CONNECTED) and (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
+        if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
             msg = protocol.connect(client._server, client._port, user)
             print(msg)
-            if msg == "DISCONNECT OK":
-                client._state = client.State.REGISTERED
         else:
             settings = protocol.SETTINGS['disconnect']
             print(settings[settings['default']])
@@ -174,7 +172,9 @@ class client :
 
                     elif(line[0]=="QUIT") :
                         if (len(line) == 1) :
-                            # todo: Esta operaci´on de desconexi´on deber´a realizarse siempre que el usuario introduzca por consola el comando QUIT.
+                            # review
+                            if (client._user is not None):
+                                client.disconnect(client._user)
                             break
                         else :
                             print("Syntax error. Use: QUIT")

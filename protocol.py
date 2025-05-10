@@ -135,9 +135,13 @@ def unregister(server: str, port: int, user: str) -> int:
     return settings.get(code, settings[settings['default']])
 
 def connect(server: str, port: int, user: str) -> int:
+    global running, listener, thread
+    
     # Creamos el socket de servidor
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # El listener revisará periódicamente si debe ser desactivado
+    listener.settimeout(1)
 
     # Configuramos este socket con la IP host local y puerto 0 → el SO elige un puerto libre
     listener.bind(('0.0.0.0', 0))
@@ -151,24 +155,29 @@ def connect(server: str, port: int, user: str) -> int:
 
     # función del hilo que escucha las peticiones de descarga de ficheros de otros usuarios
     def p2p(sock):
-        while True:
-            # connection es un nuevo socket que se usa para transmitir datos con el otro cliente
-            # client adress es una tupla con la dirección ip y el puerto del cliente
-            connection, client_address = sock.accept()
-            
-            # todo: manejar petición
+        while running:
             try:
-                pass
-            finally:
-                connection.close()
+                # connection es un nuevo socket que se usa para transmitir datos con el otro cliente
+                # client adress es una tupla con la dirección ip y el puerto del cliente
+                connection, client_address = sock.accept()
+                
+                # todo: manejar petición
+                try:
+                    pass
+                finally:
+                    connection.close()
+            except socket.timeout:
+                # cada segundo revisa de nuevo el flag
+                continue
+            except OSError:
+                # listener.close() lanza OSError. debemos salir del bucle
+                break
 
-    # todo: cerrar sock (socket de servidor). 
-    # qué ocurre si el usuario hace quit en mitad de un connect?
-    # y si hay algún error en la función del thread que se encarga de escuchar y atender las peticiones
 
     # creamos el hilo
-    t = threading.Thread(target=p2p, name='Daemon', args=(listener,))
-    t.start()
+    thread = threading.Thread(target=p2p, daemon='True', args=(listener,))
+    running = True
+    thread.start()
 
     # mandamos solicitud de conexión al servidor
     settings = SETTINGS['connect']
@@ -176,8 +185,14 @@ def connect(server: str, port: int, user: str) -> int:
     return settings.get(code, settings[settings['default']])
 
 def disconnect(server: str, port: int, user: str) -> int:
-
-
+    global running, listener, thread
+    # señalo al thread que debe parar su ejecución
+    running = False
+    # cierro el socket de escucha, lo que fuerza un OS error en el thread
+    listener.close()
+    # espero a que el hilo termine
+    thread.join()
+     
     # mandamos solicitud de desconexión al servidor
     settings = SETTINGS['disconnect']
     code = communicate_with_server(server, port, ["DISCONNECT", user], settings['default'])
