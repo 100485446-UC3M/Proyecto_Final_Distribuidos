@@ -110,8 +110,7 @@ def communicate_with_server(server: str, port: int, list_str: list, default_erro
     try:
         # with asegura cerrar el socket después de salir de él
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # timeout de 10 segundos para que si hay un fallo en las operaciones bloqueantes, el programa no quede bloqueado indefinidamente
-            sock.settimeout(10)
+            # timeout de 30 segundos para que si hay un fallo en las operaciones bloqueantes, el programa no quede bloqueado indefinidamente
             sock.connect((server, port))
             # envíamos todas las cadenas necesarias al servidor
             for string in list_str:
@@ -177,7 +176,7 @@ def connect(server: str, port: int, user: str) -> int:
     return settings.get(code, settings[settings['default']])
 
 def disconnect(server: str, port: int, user: str) -> int:
-    
+
 
     # mandamos solicitud de desconexión al servidor
     settings = SETTINGS['disconnect']

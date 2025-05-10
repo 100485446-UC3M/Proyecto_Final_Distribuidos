@@ -42,21 +42,25 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
         free(parsedMessage->action); // Liberar memoria en caso de error
         return ERROR_COMMUNICATION;
     }
-
+    /*
    // Leer otros argumentos (opcional)
-   bytesRead = readLine(socket, buffer, sizeof(buffer));
-   if (bytesRead > 0) {
-       parsedMessage->arguments = strdup(buffer);
-       if (parsedMessage->arguments == NULL) {
-           perror("Error al asignar memoria para los argumentos");
-           free(parsedMessage->action);
-           free(parsedMessage->UserName);
-           return ERROR_COMMUNICATION;
-       }
-   } else {
-       parsedMessage->arguments = NULL;
+   if (strcmp(parsedMessage->action, "PUBLISH")){
+        bytesRead = readLine(socket, buffer, sizeof(buffer));
+
+        if (bytesRead > 0) {
+            parsedMessage->arguments = strdup(buffer);
+            if (parsedMessage->arguments == NULL) {
+                perror("Error al asignar memoria para los argumentos");
+                free(parsedMessage->action);
+                free(parsedMessage->UserName);
+                return ERROR_COMMUNICATION;
+            }
+        } else {
+            parsedMessage->arguments = NULL;
+        }
    }
-    return 0;
+    */
+   return 0;
 }
 
 // Función para liberar la memoria de ParsedMessage
@@ -88,6 +92,7 @@ int is_user_registered(const char *username) {
     printf("Entre a is_user_registered\n");
     UserNode *current = userList.head;
     while (current != NULL) {
+        printf("%s", current->username);
         if (strcmp(current->username, username) == 0) {
             pthread_mutex_unlock(&userList.mutex);
             printf("Sali de is_user_registered: 1\n");
@@ -394,7 +399,7 @@ ssize_t readLine(int socket, char * buffer, size_t n){
 
     for (;;) {
         // Leer un byte del socket
-        numRead = read(socket, &ch, 1);   
+        numRead = read(socket, &ch, 1);
         if (numRead == -1) {
             // reiniciar read al ser interrumpido
             if (errno == EINTR) continue;

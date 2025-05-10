@@ -29,7 +29,7 @@ class client :
 
     @staticmethod
     def  register(user) :
-        if (client._state == client.State.UNREGISTERED) and (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
+        if (client._state != client.State.REGISTERED) and (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
             msg = protocol.register(client._server, client._port, user)
             print(msg)
             if msg == "REGISTER OK":
