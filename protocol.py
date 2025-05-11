@@ -115,9 +115,9 @@ def communicate_with_server(server: str, port: int, list_str: list, default_erro
             # envíamos todas las cadenas necesarias al servidor
             for string in list_str:
                 send_str(sock, string)
-            # devolvemos el código recibido
+            # devolvemos el código recibido y el socket por si hace falta más comunicaciones
             code = recv_byte(sock)
-            return code
+            return code, sock
             
     # si hay cualquier tipo de error en el cliente, se devuelve el valor predeterminado de error
     except (socket.error, ValueError, ConnectionError, OSError, TimeoutError, UnicodeError) as e:
@@ -126,24 +126,54 @@ def communicate_with_server(server: str, port: int, list_str: list, default_erro
 def register(server: str, port: int, user: str) -> str:
     # mandamos solicitud de registro al servidor
     settings = SETTINGS['register']
-    code = communicate_with_server(server, port, ["REGISTER", user], settings['default'])
+    code, _sock = communicate_with_server(server, port, ["REGISTER", user], settings['default'])
     return settings.get(code, settings[settings['default']])
 
 def unregister(server: str, port: int, user: str) -> str:
     # mandamos solicitud de borrar registro al servidor
     settings = SETTINGS['unregister']
-    code = communicate_with_server(server, port, ["UNREGISTER", user], settings['default'])
+    code, _sock = communicate_with_server(server, port, ["UNREGISTER", user], settings['default'])
     return settings.get(code, settings[settings['default']])
 
 def connect(server: str, port: int, user: str, chosen_port: str) -> str:
     # mandamos solicitud de conexión al servidor
     settings = SETTINGS['connect']
-    code = communicate_with_server(server, port, ["CONNECT", user, str(chosen_port)], settings['default'])
+    code, _sock = communicate_with_server(server, port, ["CONNECT", user, str(chosen_port)], settings['default'])
     return settings.get(code, settings[settings['default']])
 
 def disconnect(server: str, port: int, user: str) -> str:
     # mandamos solicitud de desconexión al servidor
     settings = SETTINGS['disconnect']
-    code = communicate_with_server(server, port, ["DISCONNECT", user], settings['default'])
+    code, _sock = communicate_with_server(server, port, ["DISCONNECT", user], settings['default'])
     return settings.get(code, settings[settings['default']])
     
+def publish(server: str, port: int, user: str, fileName: str, description: str) -> str:
+    # mandamos solicitud de publicación al servidor
+    settings = SETTINGS['publish']
+    code, _sock = communicate_with_server(server, port, ["PUBLISH", user, fileName, description], settings['default'])
+    return settings.get(code, settings[settings['default']])
+
+def delete(server: str, port: int, user: str, fileName: str) -> str:
+    # mandamos solicitud de publicación al servidor
+    settings = SETTINGS['delete']
+    code, _sock = communicate_with_server(server, port, ["DELETE", user, fileName], settings['default'])
+    return settings.get(code, settings[settings['default']])
+
+def list_users(server: str, port: int, user: str) -> str:
+    # mandamos solicitud de lista de usuarios al servidor
+    settings = SETTINGS['list_users']
+    code, _sock = communicate_with_server(server, port, ["LIST_USERS", user], settings['default'])
+    msg = settings.get(code, settings[settings['default']])
+    # si el código recibido es 0, esperamos recibir la lista de usuarios
+    if code == 0:
+        try:
+            # with asegura cerrar el socket después de salir de él
+            with _sock as sock:
+                #recibimos la información de cada usuario
+                for i in range(int(recv_str(sock))):
+                    msg += recv_str(sock)
+            
+        # si hay cualquier tipo de error en el cliente, se devuelve el valor predeterminado de error
+        except (socket.error, ValueError, ConnectionError, OSError, TimeoutError, UnicodeError) as e:
+            return settings[settings['default']]
+    return msg

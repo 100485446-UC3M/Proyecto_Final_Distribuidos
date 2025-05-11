@@ -1,4 +1,5 @@
 from enum import Enum
+from pathlib import Path
 import argparse
 import protocol
 import socket
@@ -133,20 +134,28 @@ class client :
 
     @staticmethod
     def  publish(fileName,  description) :
-        #  todo
-        return client.RC.ERROR
+        if (fileName is not None) and (type(fileName) is str) and (0 < len(fileName.encode("utf-8")) <= protocol.MAX_LEN) and (Path(fileName).is_absolute()) and (description is not None) and (type(description) is str) and (0 < len(description.encode("utf-8")) <= protocol.MAX_LEN):  
+            msg = protocol.publish(client._server, client._port, client._user, fileName, description)
+            print("c> " + msg)
+        else:
+            settings = protocol.SETTINGS['publish']
+            print(settings[settings['default']])
 
     @staticmethod
     def  delete(fileName) :
-        #  todo
-        return client.RC.ERROR
+        if (fileName is not None) and (type(fileName) is str) and (0 < len(fileName.encode("utf-8")) <= protocol.MAX_LEN) and (Path(fileName).is_absolute()):  
+            msg = protocol.delete(client._server, client._port, client._user, fileName)
+            print("c> " + msg)
+        else:
+            settings = protocol.SETTINGS['delete']
+            print(settings[settings['default']])
     
 
 
     @staticmethod
     def  listusers() :
-        #  todo
-        return client.RC.ERROR
+        msg = protocol.list_users(client._server, client._port, client._user)
+        print("c> " + msg)
 
     @staticmethod
     def  listcontent(user) :
