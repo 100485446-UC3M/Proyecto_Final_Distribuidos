@@ -1,0 +1,1 @@
+Para la Compilación del proyecto será necesario utilizar el comando "MAKE" para compilar el servidor y sus funciones. Posteriormente, se debe inicializar el cliente con la terminal, y proceder a escribir los comandos.
