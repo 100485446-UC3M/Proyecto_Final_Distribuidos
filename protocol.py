@@ -204,10 +204,12 @@ def list_users(server: str, port: int, user: str) -> str:
                 except ValueError:
                     # el servidor ha retornado un valor no integer
                     return settings[settings['default']]
-    
+                
+                msg += "\n\t"
                 #recibimos la información de cada usuario
                 for i in range(number):
-                    msg += recv_str(sock_conn)
+                    for i in range(3):
+                        msg += (recv_str(sock_conn) + "\n\t")
 
                 return msg
             
@@ -235,10 +237,11 @@ def list_content(server: str, port: int, local_user: str, remote_user: str) -> s
                 except ValueError:
                     # el servidor ha retornado un valor no integer
                     return settings[settings['default']]
-    
+
+                msg += "\n\t"
                 #recibimos la información de cada usuario
                 for i in range(number):
-                    msg += recv_str(sock_conn)
+                    msg += (recv_str(sock_conn) + "\n\t")
 
                 return msg
             

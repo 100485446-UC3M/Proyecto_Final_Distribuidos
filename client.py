@@ -17,15 +17,6 @@ class client :
         ERROR = 1
         USER_ERROR = 2
 
-    # review
-    """ 
-    # clase que contiene los posibles valores de la máquina de estados del cliente
-    class State(Enum):
-        UNREGISTERED = 0
-        REGISTERED   = 1
-        CONNECTED    = 2
-    """
-
     # ****************** ATTRIBUTES ******************
     _server = None
     _port = -1
@@ -109,7 +100,6 @@ class client :
                 # connection es un nuevo socket que se usa para transmitir datos con el otro cliente
                 # client_address es una tupla con la dirección ip y el puerto del cliente
                 connection, client_address = sock.accept()
-                # review: exclusión mutua
                 # creamos un thread daemon para gestionar cada petición
                 threading.Thread(target=client._handle_p2p_connection, args=(connection,), daemon=True).start()                    
             except socket.timeout:
@@ -159,8 +149,11 @@ class client :
                 if client._listener:
                     client._running = False
                     client._listener.close()
+                    client._listener = None
                 if client._thread:
                     client._thread.join()
+                    client._thread = None
+
         else:
             settings = protocol.SETTINGS['connect']
             print("c> " + settings[settings['default']])
@@ -176,8 +169,10 @@ class client :
                 client._running = False
                 # cierro el socket de escucha, lo que fuerza un OS error en el thread
                 client._listener.close()
+                client._listener = None
                 # espero a que el hilo termine
                 client._thread.join()
+                client._thread = None
 
             msg = protocol.disconnect(client._server, client._port, user)
             print("c> " + msg)
