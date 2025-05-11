@@ -1,8 +1,10 @@
+Para lograr correr el código es necesario llevar a cabo este proceso:
+
 En una sesión de la terminal:
 1. make
 2. ./server -p <puerto del servidor>
 
-En otra sesión de la terminal y en en la misma maquina que el cliente:
+En otra sesión de la terminal (y en la misma maquina que el cliente):
 
 3. python3 webService.py
 
