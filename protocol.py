@@ -73,9 +73,7 @@ SETTINGS = {
 
 def send_str(sock: socket.socket, txt: str) -> None:
     # data es un objeto bytes que codifica los carácteres del string según utf-8
-    # review: None.encode
     data = txt.encode('utf-8')
-    # review: no enviar string si está vacío?
     if len(data) == 0:
         raise ValueError("El campo está vacío")
     elif len(data) > MAX_LEN:
