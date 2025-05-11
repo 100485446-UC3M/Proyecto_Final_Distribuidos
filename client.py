@@ -48,7 +48,7 @@ class client :
             print("c> " + msg)
         else:
             settings = protocol.SETTINGS['register']
-            print(settings[settings['default']])
+            print("c> " + settings[settings['default']])
    
     @staticmethod
     def  unregister(user) :
@@ -57,7 +57,7 @@ class client :
             print("c> " + msg)
         else:
             settings = protocol.SETTINGS['unregister']
-            print(settings[settings['default']])
+            print("c> " + settings[settings['default']])
 
     @staticmethod
     def _handle_p2p_connection(connection):
@@ -154,14 +154,16 @@ class client :
                     client._user = user
                 else:
                     raise Exception
-            except:
+            except Exception:
                 # si la conexión falla, hay que deshacer todos los cambios
+                if client._listener:
                     client._running = False
                     client._listener.close()
+                if client._thread:
                     client._thread.join()
         else:
             settings = protocol.SETTINGS['connect']
-            print(settings[settings['default']])
+            print("c> " + settings[settings['default']])
 
 
     @staticmethod
@@ -181,7 +183,7 @@ class client :
             print("c> " + msg)
         else:
             settings = protocol.SETTINGS['disconnect']
-            print(settings[settings['default']])
+            print("c> " + settings[settings['default']])
 
     #fix: no funciona
     @staticmethod
@@ -193,7 +195,7 @@ class client :
             print("c> " + msg)
         else:
             settings = protocol.SETTINGS['publish']
-            print(settings[settings['default']])
+            print("c> " + settings[settings['default']])
 
     #fix: no funciona
     @staticmethod
@@ -203,7 +205,7 @@ class client :
             print("c> " + msg)
         else:
             settings = protocol.SETTINGS['delete']
-            print(settings[settings['default']])
+            print("c> " + settings[settings['default']])
     
 
 
@@ -230,6 +232,8 @@ class client :
 
         if first_line.upper().startswith("LIST_USERS OK"):
             for line_data in rest:
+                if not line_data.strip():
+                    continue
                 parts = line_data.split()
                 if len(parts) >= 3 and parts[0] == target_user_name:
                     return parts[1], parts[2]  # IP, Puerto
@@ -250,7 +254,7 @@ class client :
 
             if remote_user_ip is None or remote_user_port is None:
                 # Error al obtener la dirección del usuario (no encontrado, error en list_users, etc.)
-                print(settings[settings['default']])
+                print("c> " + settings[settings['default']])
                 return
             
 
@@ -266,7 +270,7 @@ class client :
                             number = int(number_str)
                         except ValueError:
                             # el servidor ha retornado un valor no integer
-                            print(settings[settings['default']])
+                            print("c> " + settings[settings['default']])
                             return
 
                         # creamos o abrimos el fichero. además, with open se asegurará de cerrarlo más tarde
@@ -278,7 +282,7 @@ class client :
                                 data = protocol.recv_bytes(sock_conn, chunk_size)
                                 if not data:
                                     # Conexión cerrada prematuramente
-                                    print(settings[settings['default']])
+                                    print("c> " + settings[settings['default']])
                                     # tratamos de borrar el archivo incompleto
                                     try:
                                         os.remove(local_FileName)
@@ -290,7 +294,7 @@ class client :
                     
                 # si hay cualquier tipo de error en el cliente, se devuelve el valor predeterminado de error
                 except (socket.error, ValueError, ConnectionError, OSError, TimeoutError, UnicodeError) as e:
-                    print(settings[settings['default']])
+                    print("c> " + settings[settings['default']])
                     return
             else:
                 # communicate with server falló
@@ -303,7 +307,7 @@ class client :
             return
         
         else:
-            print(settings[settings['default']])
+            print("c> " + settings[settings['default']])
             return
 
 
