@@ -39,7 +39,7 @@ class client :
     def  register(user) :
         if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
             msg = protocol.register(client._server, client._port, user)
-            print(msg)
+            print("c> " + msg)
         else:
             settings = protocol.SETTINGS['register']
             print(settings[settings['default']])
@@ -48,7 +48,7 @@ class client :
     def  unregister(user) :
         if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
             msg = protocol.unregister(client._server, client._port, user)
-            print(msg)
+            print("c> " + msg)
         else:
             settings = protocol.SETTINGS['unregister']
             print(settings[settings['default']])
@@ -103,7 +103,7 @@ class client :
             client._thread.start()
 
             msg = protocol.connect(client._server, client._port, user, chosen_port)
-            print(msg)
+            print("c> " + msg)
             if msg == "CONNECT OK":
                 # en caso de una conexión exitosa, cambiamos el nombre de usuario actualmente conectado
                 client._user = user
@@ -117,7 +117,7 @@ class client :
         # toda desconexión implica borrar el nombre del usuario conectado actualmente
         client._user = None
         if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
-            if client._listener:
+            if client._listener and client._thread:
                 # señalo al thread que debe parar su ejecución
                 client._running = False
                 # cierro el socket de escucha, lo que fuerza un OS error en el thread
@@ -126,7 +126,7 @@ class client :
                 client._thread.join()
 
             msg = protocol.disconnect(client._server, client._port, user)
-            print(msg)
+            print("c> " + msg)
         else:
             settings = protocol.SETTINGS['disconnect']
             print(settings[settings['default']])
