@@ -5,6 +5,7 @@ import protocol
 import socket
 import threading
 import os
+import zeep # Para Servicio Web SOAP
 
 class client :
 
@@ -33,9 +34,18 @@ class client :
         return (field is not None) and isinstance(field, str) and 0 < len(field.encode()) <= protocol.MAX_LEN
 
     @staticmethod
+    def get_datetime():
+        # Consumir el servicio web para obtener la fecha y hora
+        wsdl = 'http://127.0.0.1:5000/?wsdl'
+        client = zeep.Client(wsdl=wsdl)
+        return client.service.get_datetime()
+
+
+    @staticmethod
     def  register(user) :
-        if client._validate_field(user):  
-            msg = protocol.register(client._server, client._port, user)
+        if client._validate_field(user):
+            datetime_str = client.get_datetime()  # Obtener la fecha y hora  
+            msg = protocol.register(client._server, client._port, datetime_str, user)
             print("c> " + msg)
         else:
             settings = protocol.SETTINGS['register']
@@ -44,7 +54,8 @@ class client :
     @staticmethod
     def  unregister(user) :
         if client._validate_field(user):  
-            msg = protocol.unregister(client._server, client._port, user)
+            datetime_str = client.get_datetime()  # Obtener la fecha y hora  
+            msg = protocol.unregister(client._server, client._port, datetime_str, user)
             print("c> " + msg)
         else:
             settings = protocol.SETTINGS['unregister']
@@ -136,8 +147,8 @@ class client :
                 # creamos el hilo
                 client._thread = threading.Thread(target=client._p2p_server_loop, args=(client._listener,))
                 client._thread.start()
-
-                msg = protocol.connect(client._server, client._port, user, chosen_port)
+                datetime_str = client.get_datetime()  # Obtener la fecha y hora
+                msg = protocol.connect(client._server, client._port, datetime_str, user, chosen_port)
                 print("c> " + msg)
                 if msg == "CONNECT OK":
                     # en caso de una conexión exitosa, cambiamos el nombre de usuario actualmente conectado
@@ -173,8 +184,8 @@ class client :
                 # espero a que el hilo termine
                 client._thread.join()
                 client._thread = None
-
-            msg = protocol.disconnect(client._server, client._port, user)
+            datetime_str = client.get_datetime()  
+            msg = protocol.disconnect(client._server, client._port, datetime_str, user)
             print("c> " + msg)
         else:
             settings = protocol.SETTINGS['disconnect']
@@ -186,7 +197,8 @@ class client :
         if (client._validate_field(fileName) and (Path(fileName).is_absolute()) and 
             client._validate_field(description)
         ):  
-            msg = protocol.publish(client._server, client._port, client._user, fileName, description)
+            datetime_str = client.get_datetime()
+            msg = protocol.publish(client._server, client._port, datetime_str, client._user, fileName, description)
             print("c> " + msg)
         else:
             settings = protocol.SETTINGS['publish']
@@ -195,8 +207,9 @@ class client :
     #fix: no funciona
     @staticmethod
     def  delete(fileName) :
-        if (client._validate_field(fileName) and (Path(fileName).is_absolute())):            
-            msg = protocol.delete(client._server, client._port, client._user, fileName)
+        if (client._validate_field(fileName) and (Path(fileName).is_absolute())):
+            datetime_str = client.get_datetime()            
+            msg = protocol.delete(client._server, client._port, datetime_str, client._user, fileName)
             print("c> " + msg)
         else:
             settings = protocol.SETTINGS['delete']
@@ -206,12 +219,14 @@ class client :
 
     @staticmethod
     def  listusers() :
-        msg = protocol.list_users(client._server, client._port, client._user)
+        datetime_str = client.get_datetime()
+        msg = protocol.list_users(client._server, client._port, datetime_str, client._user)
         print("c> " + msg)
 
     @staticmethod
     def  listcontent(user) :
-        msg = protocol.list_content(client._server, client._port, client._user, user)
+        datetime_str = client.get_datetime()
+        msg = protocol.list_content(client._server, client._port, datetime_str, client._user, user)
         print("c> " + msg)
     
     @staticmethod
