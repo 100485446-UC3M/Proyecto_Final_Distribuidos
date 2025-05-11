@@ -5,7 +5,7 @@ Para ello, ejecute en una misma sesión de la terminal los siguientes comandos:
 
 Por otro lado, ya sea en la misma máquina que el servidor u otra, podemos crear
 tantos clientes como queramos. 
-Para ello, primero debemos ejecutar el servicio web en una sesión de la terminal:
+Con ese fin, primero debemos ejecutar el servicio web en una sesión de la terminal:
 3. python3 webService.py
 
 En otra sesión de la terminal dentro de la misma máquina que el servidor web,
