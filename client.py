@@ -38,8 +38,12 @@ class client :
     # ******************** METHODS *******************
 
     @staticmethod
+    def _validate_field(field: str) -> bool:
+        return isinstance(field, str) and 0 < len(field.encode()) <= protocol.MAX_LEN
+
+    @staticmethod
     def  register(user) :
-        if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
+        if client._validate_field(user):  
             msg = protocol.register(client._server, client._port, user)
             print("c> " + msg)
         else:
@@ -48,7 +52,7 @@ class client :
    
     @staticmethod
     def  unregister(user) :
-        if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
+        if client._validate_field(user):  
             msg = protocol.unregister(client._server, client._port, user)
             print("c> " + msg)
         else:
@@ -99,8 +103,8 @@ class client :
             connection.close()
     
     @staticmethod
-    def _p2p_server_loop(sock, running):
-        while running:
+    def _p2p_server_loop(sock):
+        while client._running:
             try:
                 # connection es un nuevo socket que se usa para transmitir datos con el otro cliente
                 # client_address es una tupla con la dirección ip y el puerto del cliente
@@ -117,43 +121,44 @@ class client :
     
     @staticmethod
     def  connect(user) :
-        if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):
+        if client._validate_field(user):
             if (client._user is not None) and (client._user != user):
                 client.disconnect(client._user)
+            try:
+                # Creamos el socket de servidor
+                client._listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client._listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                # El listener revisará periódicamente si debe ser desactivado
+                client._listener.settimeout(1)
 
-            # Creamos el socket de servidor
-            client._listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client._listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            # El listener revisará periódicamente si debe ser desactivado
-            client._listener.settimeout(1)
+                # Configuramos este socket con la IP host local y puerto 0 → el SO elige un puerto libre
+                client._listener.bind(('0.0.0.0', 0))
 
-            # Configuramos este socket con la IP host local y puerto 0 → el SO elige un puerto libre
-            client._listener.bind(('0.0.0.0', 0))
+                # Recuperamos el puerto asignado
+                _, chosen_port = client._listener.getsockname()
 
-            # Recuperamos el puerto asignado
-            _, chosen_port = client._listener.getsockname()
+                # Empieza a escuchar. Permitimos que haya hasta 5 clientes en cola si ya hay uno conectado
+                client._listener.listen(5)
+                
+                # review: race condition en client._running?
+                # por defecto, el hilo ejecutará
+                client._running = True
+                # creamos el hilo
+                client._thread = threading.Thread(target=client._p2p_server_loop, args=(client._listener,))
+                client._thread.start()
 
-            # Empieza a escuchar. Permitimos que haya hasta 5 clientes en cola si ya hay uno conectado
-            client._listener.listen(5)
-            
-            # review: race condition en client._running?
-            # por defecto, el hilo ejecutará
-            client._running = True
-            # creamos el hilo
-            client._thread = threading.Thread(target=client._p2p_server_loop, args=(client._listener, client._running))
-            client._thread.start()
-
-            msg = protocol.connect(client._server, client._port, user, chosen_port)
-            print("c> " + msg)
-            if msg == "CONNECT OK":
-                # en caso de una conexión exitosa, cambiamos el nombre de usuario actualmente conectado
-                client._user = user
-            else:
-                # si la conexión falla, hay que reiniciar todo
-                client._running = False
-                client._listener.close()
-                client._thread.join()
-
+                msg = protocol.connect(client._server, client._port, user, chosen_port)
+                print("c> " + msg)
+                if msg == "CONNECT OK":
+                    # en caso de una conexión exitosa, cambiamos el nombre de usuario actualmente conectado
+                    client._user = user
+                else:
+                    raise Exception
+            except:
+                # si la conexión falla, hay que deshacer todos los cambios
+                    client._running = False
+                    client._listener.close()
+                    client._thread.join()
         else:
             settings = protocol.SETTINGS['connect']
             print(settings[settings['default']])
@@ -163,7 +168,7 @@ class client :
     def  disconnect(user) :
         # toda desconexión implica borrar el nombre del usuario conectado actualmente
         client._user = None
-        if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
+        if client._validate_field(user):  
             if client._listener and client._thread:
                 # señalo al thread que debe parar su ejecución
                 client._running = False
@@ -181,8 +186,8 @@ class client :
     #fix: no funciona
     @staticmethod
     def  publish(fileName,  description) :
-        if ((fileName is not None) and (type(fileName) is str) and (0 < len(fileName.encode("utf-8")) <= protocol.MAX_LEN) and (Path(fileName).is_absolute()) and
-           (description is not None) and (type(description) is str) and (0 < len(description.encode("utf-8")) <= protocol.MAX_LEN)
+        if (client._validate_field(fileName) and (Path(fileName).is_absolute()) and 
+            client._validate_field(description)
         ):  
             msg = protocol.publish(client._server, client._port, client._user, fileName, description)
             print("c> " + msg)
@@ -193,7 +198,7 @@ class client :
     #fix: no funciona
     @staticmethod
     def  delete(fileName) :
-        if (fileName is not None) and (type(fileName) is str) and (0 < len(fileName.encode("utf-8")) <= protocol.MAX_LEN) and (Path(fileName).is_absolute()):  
+        if (client._validate_field(fileName) and (Path(fileName).is_absolute())):            
             msg = protocol.delete(client._server, client._port, client._user, fileName)
             print("c> " + msg)
         else:
@@ -235,9 +240,9 @@ class client :
     @staticmethod
     def  getfile(user,  remote_FileName,  local_FileName) :
         settings = protocol.SETTINGS['get_file']
-        if ((user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN) and 
-            (remote_FileName is not None) and (type(remote_FileName) is str) and (0 < len(remote_FileName.encode("utf-8")) <= protocol.MAX_LEN) and (Path(remote_FileName).is_absolute()) and 
-            (local_FileName is not None) and (type(local_FileName) is str) and (0 < len(local_FileName.encode("utf-8")) <= protocol.MAX_LEN) and (Path(local_FileName).is_absolute())
+        if (client._validate_field(user) and 
+            client._validate_field(remote_FileName) and (Path(remote_FileName).is_absolute()) and 
+            client._validate_field(local_FileName) and (Path(local_FileName).is_absolute())
         ):  
 
             # obtenemos la IP y el puerto del user
