@@ -99,14 +99,15 @@ class client :
             connection.close()
     
     @staticmethod
-    def _p2p_server_loop(sock):
-        while client._running:
+    def _p2p_server_loop(sock, running):
+        while running:
             try:
                 # connection es un nuevo socket que se usa para transmitir datos con el otro cliente
                 # client_address es una tupla con la dirección ip y el puerto del cliente
                 connection, client_address = sock.accept()
-                client._handle_p2p_connection(connection)
-                    
+                # review: exclusión mutua
+                # creamos un thread daemon para gestionar cada petición
+                threading.Thread(target=client._handle_p2p_connection, args=(connection,), daemon=True).start()                    
             except socket.timeout:
                 # cada segundo revisa de nuevo el flag _running
                 continue
@@ -139,7 +140,7 @@ class client :
             # por defecto, el hilo ejecutará
             client._running = True
             # creamos el hilo
-            client._thread = threading.Thread(target=client._p2p_server_loop, args=(client._listener,))
+            client._thread = threading.Thread(target=client._p2p_server_loop, args=(client._listener, client._running))
             client._thread.start()
 
             msg = protocol.connect(client._server, client._port, user, chosen_port)
@@ -147,6 +148,12 @@ class client :
             if msg == "CONNECT OK":
                 # en caso de una conexión exitosa, cambiamos el nombre de usuario actualmente conectado
                 client._user = user
+            else:
+                # si la conexión falla, hay que reiniciar todo
+                client._running = False
+                client._listener.close()
+                client._thread.join()
+
         else:
             settings = protocol.SETTINGS['connect']
             print(settings[settings['default']])
