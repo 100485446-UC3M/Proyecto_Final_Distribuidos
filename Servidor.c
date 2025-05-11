@@ -143,29 +143,68 @@ void * SendResponse(void * sc){
         }
     } else if (strcmp(parsedMessage.action, "LIST_USERS") == 0) {
         printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
+
         if (parsedMessage.UserName == NULL) {
-            perror("SERVIDOR: Username faltantes para LIST");
+            perror("SERVIDOR: Username faltantes para LIST_USERS");
             ret = 3; // Error en la comunicación
         } else if (!is_user_registered(parsedMessage.UserName)) {
             ret = 1; // Usuario no existe
         } else if (!is_user_connected(parsedMessage.UserName)) {
             ret = 2; // Usuario no conectado
         } else {
-            // Enviar el código de éxito (0) primero
-            snprintf(buffer, sizeof(buffer), "%d", 0);
-            if (sendByte(s_local, ret) != 0)  {
+            // Enviar el código de éxito (0)
+            if (sendByte(s_local, 0) != 0) {
                 perror("SERVIDOR: Error al enviar el código de éxito");
                 ret = 3; // Error en la comunicación
-            } else {
-                already_sent = 1; // Marcar como ya enviado
-                char user_list[1024];
-                get_ListUsers(user_list, sizeof(user_list));
+                }
+            already_sent = 1;
+            char user_list[1024];
+            memset(user_list, 0, sizeof(user_list));
+            int num_users = get_ListUsers(user_list, sizeof(user_list));
 
-                // Enviar la lista de usuarios conectados al cliente
-                if (sendMessage(s_local, user_list, strlen(user_list) + 1) != 0) {
-                    perror("SERVIDOR: Error al enviar la lista de usuarios");
-                    ret = 3; // Error en la comunicación
-                } 
+            // Enviar el número de usuarios conectados
+            snprintf(buffer, sizeof(buffer), "%d", num_users);
+            if (sendMessage(s_local, buffer, strlen(buffer) + 1) != 0) {
+                perror("SERVIDOR: Error al enviar el número de usuarios");
+                ret = 3; // Error en la comunicación
+            } else {
+                // Dividir la lista de usuarios en tokens y enviar cada campo uno a uno
+                char *user_info = strtok(user_list, "\n");
+                while (user_info != NULL) {
+                    // Dividir la información del usuario en nombre, IP y puerto
+                    char username[256], ip_address[INET_ADDRSTRLEN];
+                    int port;
+                    sscanf(user_info, "%s %s %d", username, ip_address, &port);
+
+                    // Enviar el nombre de usuario
+                    if (sendMessage(s_local, username, strlen(username) + 1) != 0) {
+                        perror("SERVIDOR: Error al enviar el nombre de usuario");
+                        ret = 3; 
+                        break;
+                    }
+
+                    // Enviar la dirección IP
+                    if (sendMessage(s_local, ip_address, strlen(ip_address) + 1) != 0) {
+                        perror("SERVIDOR: Error al enviar la dirección IP");
+                        ret = 3; 
+                        break;
+                    }
+
+                    // Enviar el puerto
+                    snprintf(buffer, sizeof(buffer), "%d", port);
+                    if (sendMessage(s_local, buffer, strlen(buffer) + 1) != 0) {
+                        perror("SERVIDOR: Error al enviar el puerto");
+                        ret = 3; // Error en la comunicación
+                        break;
+                    }
+
+                    // Obtener el siguiente usuario
+                    user_info = strtok(NULL, "\n");
+                }
+
+                if (ret != 3) {
+                    ret = 0; // Operación exitosa
+                }
             }
         }
     } else if (strcmp(parsedMessage.action, "LIST_CONTENT") == 0){

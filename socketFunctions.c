@@ -243,6 +243,7 @@ int is_user_connected(const char *username) {
     pthread_mutex_unlock(&userList.mutex);
     return 0; // Usuario no conectado
 }
+
 int register_connection(const char *username, int port, int client_socket) {
     pthread_mutex_lock(&userList.mutex);
 
@@ -332,40 +333,29 @@ int delete_publication(const char *file_name) {
 }
 
 
-void get_ListUsers(char *buffer, size_t buffer_size) {
+int get_ListUsers(char *buffer, size_t buffer_size) {
     pthread_mutex_lock(&userList.mutex);
 
     UserNode *current = userList.head;
+    int count = 0;
     size_t offset = 0;
 
-    // Inicializar el buffer
-    memset(buffer, 0, buffer_size);
-
-    // Recorrer la lista de usuarios conectados
     while (current != NULL) {
         if (current->connected) {
-            char user_info[512];
-            char ip_buffer[INET_ADDRSTRLEN];
-
-            // Convertir la dirección IP a formato legible
-            inet_ntop(AF_INET, &current->ip, ip_buffer, INET_ADDRSTRLEN);
-
-            // Formatear la información del usuario
-            snprintf(user_info, sizeof(user_info), "User: %s, IP: %s, Port: %d\n",
-                     current->username, ip_buffer, current->port);
-
-            // Verificar que el buffer no se desborde
-            if (offset + strlen(user_info) < buffer_size) {
-                strcat(buffer, user_info);
-                offset += strlen(user_info);
-            } else {
-                break; // Detener si el buffer está lleno
+            // Información del usuario
+            int written = snprintf(buffer + offset, buffer_size - offset, "%s %s %d\n",
+                                    current->username, current->ip_address, current->port);
+            if (written < 0 || written >= buffer_size - offset) {
+                break; // Evitar desbordamiento del buffer
             }
+            offset += written;
+            count++;
         }
         current = current->next;
     }
 
     pthread_mutex_unlock(&userList.mutex);
+    return count; // Retornar el número de usuarios conectados
 }
 
 int get_publications(const char *username, char *buffer, size_t buffer_size) {

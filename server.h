@@ -28,7 +28,7 @@ typedef struct {
 typedef struct UserNode {
     char username[256];           // Nombre del usuario
     int connected;                // Estado de conexión (0 = desconectado, 1 = conectado)
-    struct in_addr ip;                     // Dirección IP del cliente
+    struct in_addr ip;            // Dirección IP del cliente
     int port;                     // Puerto del cliente
     struct UserNode *next;        // Puntero al siguiente nodo
 } UserNode;
