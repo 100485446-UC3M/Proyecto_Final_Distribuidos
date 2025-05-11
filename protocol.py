@@ -73,6 +73,7 @@ SETTINGS = {
 
 def send_str(sock: socket.socket, txt: str) -> None:
     # data es un objeto bytes que codifica los carácteres del string según utf-8
+    # review: None.encode
     data = txt.encode('utf-8')
     # review: no enviar string si está vacío?
     if len(data) == 0:
@@ -123,8 +124,6 @@ def communicate_with_server(server: str, port: int, list_str: list, default_erro
     sock = None
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # timeout de 10 segundos para que si hay un fallo en las operaciones bloqueantes, el programa no quede bloqueado indefinidamente
-        sock.settimeout(10)
         sock.connect((server, port))
         # envíamos todas las cadenas necesarias al servidor
         for string in list_str:
@@ -197,7 +196,6 @@ def list_users(server: str, port: int, user: str) -> str:
         try:
             # with asegura cerrar el socket después de salir de él
             with sock as sock_conn:
-                # fix: esteban te odio
                 number_str = recv_str(sock_conn)
                 try:
                     number = int(number_str)

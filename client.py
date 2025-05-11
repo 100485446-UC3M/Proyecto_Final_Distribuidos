@@ -62,12 +62,12 @@ class client :
 
                 if not file_path.is_absolute():
                     # Path no absoluto, error. Mandamos 2
-                    connection.sendall(b'2') 
+                    connection.sendall(bytes([2])) 
                 elif not file_path.exists() or not file_path.is_file():
-                    connection.sendall(b'1') # mandar 1 si el file no existe
+                    connection.sendall(bytes([1])) # mandar 1 si el file no existe
                 else:
                     try:
-                        connection.sendall(b'0') # mandar 0 si tengo el get_file y el fichero
+                        connection.sendall(bytes([0])) # mandar 0 si tengo el get_file y el fichero
                         
                         file_size = os.path.getsize(file_path)
                         # mandar tamaño en bytes del fichero como una cadena
@@ -82,13 +82,13 @@ class client :
                                 connection.sendall(chunk)
                     except Exception:
                         # Error al abrir el archivo. Mandamos 2
-                        connection.sendall(b'2')
+                        connection.sendall(bytes([2]))
             else:
                 # Comando no esperado, mandamos 2
-                connection.sendall(b'2')
+                connection.sendall(bytes([2]))
         except (socket.error, ValueError, ConnectionError, OSError, TimeoutError, UnicodeError) as e:
             # Error no esperado, mandamos 2
-            connection.sendall(b'2')
+            connection.sendall(bytes([2]))
         finally:
             # una vez la transferencia está hecha o ha habido algún tipo de error, cerramos la comunicación con el cliente
             connection.close()
@@ -180,7 +180,6 @@ class client :
             settings = protocol.SETTINGS['disconnect']
             print("c> " + settings[settings['default']])
 
-    #fix: no funciona
     @staticmethod
     def  publish(fileName,  description) :
         if (client._validate_field(fileName) and (Path(fileName).is_absolute()) and 
@@ -192,7 +191,6 @@ class client :
             settings = protocol.SETTINGS['publish']
             print("c> " + settings[settings['default']])
 
-    #fix: no funciona
     @staticmethod
     def  delete(fileName) :
         if (client._validate_field(fileName) and (Path(fileName).is_absolute())):            
@@ -255,6 +253,7 @@ class client :
 
             code, sock = protocol.communicate_with_server(remote_user_ip, int(remote_user_port), ["GET_FILE", remote_FileName], settings['default'])        
             msg = settings.get(code, settings[settings['default']])
+
             # si el código recibido es 0, esperamos recibir la lista de usuarios
             if (code == 0) and (sock is not None):
                 try:
@@ -267,7 +266,7 @@ class client :
                             # el servidor ha retornado un valor no integer
                             print("c> " + settings[settings['default']])
                             return
-
+                        
                         # creamos o abrimos el fichero. además, with open se asegurará de cerrarlo más tarde
                         with open(local_FileName, 'wb') as f:
                             # leer contenido del fichero remoto desde sock_conn
