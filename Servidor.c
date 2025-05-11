@@ -94,7 +94,6 @@ void * SendResponse(void * sc){
             } else {
                 char file_name[256];
                 snprintf(file_name, sizeof(file_name), "%s", parsedMessage.argument1);
-                ssize_t bytesRead;
                 // Leer la descripción
                 char description[256];
                 strncpy(description, parsedMessage.argument2, sizeof(description));
