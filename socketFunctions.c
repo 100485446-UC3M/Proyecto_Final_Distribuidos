@@ -20,14 +20,14 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
         return ERROR_COMMUNICATION;
     }
 
-     // Asignar la acción
-     parsedMessage->action = strdup(buffer); // Copiar la acción
-     //printf("UserName: %s\n", parsedMessage->UserName);
-     if (parsedMessage->action == NULL) {
-         perror("Error al asignar memoria para la acción");
-         return ERROR_COMMUNICATION;
-     }
-/*
+    // Asignar la acción
+    parsedMessage->action = strdup(buffer); // Copiar la acción
+    //printf("UserName: %s\n", parsedMessage->UserName);
+    if (parsedMessage->action == NULL) {
+        perror("Error al asignar memoria para la acción");
+        return ERROR_COMMUNICATION;
+    }
+
     // Leer la fecha de servicio web
     bytesRead = readLine(socket, buffer, sizeof(buffer));
     if (bytesRead <= 0) {
@@ -47,7 +47,7 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
          perror("Error al asignar memoria para la acción");
          return ERROR_COMMUNICATION;
      }
-     */
+
 
     // Leer el nombre de usuario
     bytesRead = readLine(socket, buffer, sizeof(buffer));

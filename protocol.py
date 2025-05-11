@@ -138,58 +138,58 @@ def communicate_with_server(server: str, port: int, list_str: list, default_erro
             sock.close()
         return default_error_value, None
     
-def register(server: str, port: int, user: str) -> str:
+def register(server: str, port: int, date: str, user: str) -> str:
     # mandamos solicitud de registro al servidor
     settings = SETTINGS['register']
-    code, _sock = communicate_with_server(server, port, ["REGISTER", user], settings['default'])
+    code, _sock = communicate_with_server(server, port, ["REGISTER", date, user], settings['default'])
     if _sock:
         _sock.close()
     return settings.get(code, settings[settings['default']])
 
-def unregister(server: str, port: int, user: str) -> str:
+def unregister(server: str, port: int, date: str, user: str) -> str:
     # mandamos solicitud de borrar registro al servidor
     settings = SETTINGS['unregister']
-    code, _sock = communicate_with_server(server, port, ["UNREGISTER", user], settings['default'])
+    code, _sock = communicate_with_server(server, port, ["UNREGISTER", date, user], settings['default'])
     if _sock:
         _sock.close()
     return settings.get(code, settings[settings['default']])
 
-def connect(server: str, port: int, user: str, chosen_port: str) -> str:
+def connect(server: str, port: int, date: str, user: str, chosen_port: str) -> str:
     # mandamos solicitud de conexión al servidor
     settings = SETTINGS['connect']
-    code, _sock = communicate_with_server(server, port, ["CONNECT", user, str(chosen_port)], settings['default'])
+    code, _sock = communicate_with_server(server, port, ["CONNECT", date, user, str(chosen_port)], settings['default'])
     if _sock:
         _sock.close()
     return settings.get(code, settings[settings['default']])
 
-def disconnect(server: str, port: int, user: str) -> str:
+def disconnect(server: str, port: int, date: str, user: str) -> str:
     # mandamos solicitud de desconexión al servidor
     settings = SETTINGS['disconnect']
-    code, _sock = communicate_with_server(server, port, ["DISCONNECT", user], settings['default'])
+    code, _sock = communicate_with_server(server, port, ["DISCONNECT", date, user], settings['default'])
     if _sock:
         _sock.close()
     return settings.get(code, settings[settings['default']])
     
-def publish(server: str, port: int, user: str, fileName: str, description: str) -> str:
+def publish(server: str, port: int, date: str, user: str, fileName: str, description: str) -> str:
     # mandamos solicitud de publicación al servidor
     settings = SETTINGS['publish']
-    code, _sock = communicate_with_server(server, port, ["PUBLISH", user, fileName, description], settings['default'])
+    code, _sock = communicate_with_server(server, port, ["PUBLISH", date, user, fileName, description], settings['default'])
     if _sock:
         _sock.close()
     return settings.get(code, settings[settings['default']])
 
-def delete(server: str, port: int, user: str, fileName: str) -> str:
+def delete(server: str, port: int, date: str, user: str, fileName: str) -> str:
     # mandamos solicitud de publicación al servidor
     settings = SETTINGS['delete']
-    code, _sock = communicate_with_server(server, port, ["DELETE", user, fileName], settings['default'])
+    code, _sock = communicate_with_server(server, port, ["DELETE", date, user, fileName], settings['default'])
     if _sock:
         _sock.close()
     return settings.get(code, settings[settings['default']])
 
-def list_users(server: str, port: int, user: str) -> str:
+def list_users(server: str, port: int, date: str, user: str) -> str:
     # mandamos solicitud de lista de usuarios al servidor
     settings = SETTINGS['list_users']
-    code, sock = communicate_with_server(server, port, ["LIST_USERS", user], settings['default'])
+    code, sock = communicate_with_server(server, port, ["LIST_USERS", date, user], settings['default'])
     msg = settings.get(code, settings[settings['default']])
     # si el código recibido es 0, esperamos recibir la lista de usuarios
     if (code == 0) and (sock is not None):
@@ -220,10 +220,10 @@ def list_users(server: str, port: int, user: str) -> str:
             sock.close()
         return msg
     
-def list_content(server: str, port: int, local_user: str, remote_user: str) -> str:
+def list_content(server: str, port: int, date: str, local_user: str, remote_user: str) -> str:
     # mandamos solicitud de lista de contenidos al servidor
     settings = SETTINGS['list_content']
-    code, sock = communicate_with_server(server, port, ["LIST_CONTENT", local_user, remote_user], settings['default'])
+    code, sock = communicate_with_server(server, port, ["LIST_CONTENT", date, local_user, remote_user], settings['default'])
     msg = settings.get(code, settings[settings['default']])
     # si el código recibido es 0, esperamos recibir la lista de usuarios
     if (code == 0) and (sock is not None):
