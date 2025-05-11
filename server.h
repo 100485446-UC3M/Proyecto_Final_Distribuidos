@@ -71,7 +71,7 @@ int get_publications(const char *username, char *buffer, size_t buffer_size);
 int unregister_connection(const char *username);
 int sendByte(int socket, char byte);
 int sendMessage(int socket, char *buffer, int len);
-void get_ListUsers(char *buffer, size_t buffer_size);
+int get_ListUsers(char *buffer, size_t buffer_size);
 ssize_t readLine(int socket, char *buffer, size_t n);
 int parseMessage(int socket, ParsedMessage *parsedMessage);
 void freeParsedMessage(ParsedMessage *parsedMessage);

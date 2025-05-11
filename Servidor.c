@@ -11,7 +11,6 @@ PublicationList publicationList = {NULL, PTHREAD_MUTEX_INITIALIZER};
 // Función ejecutado por cada hilo para atender petición del cliente
 void * SendResponse(void * sc){
     int already_sent = 0;
-    printf("\nEntramos al hilo\n");
     int s_local;
     int ret;
     s_local = (* (int *) sc);
@@ -213,13 +212,14 @@ void * SendResponse(void * sc){
     if (parsedMessage.UserName == NULL || parsedMessage.argument1 == NULL) {
         perror("SERVIDOR: Faltan argumentos para LIST_CONTENT");
         ret = 4; // Error en la comunicación
-    } else if (!is_user_registered(parsedMessage.UserName)) {
+    } else if (is_user_registered(parsedMessage.UserName) == 0) {
         ret = 1; // Usuario que realiza la operación no existe
-    } else if (!is_user_connected(parsedMessage.UserName)) {
+    } else if (is_user_connected(parsedMessage.UserName) == 0) {
         ret = 2; // Usuario que realiza la operación no está conectado
     } else if (!is_user_registered(parsedMessage.argument1)) {
         ret = 3; // Usuario cuyo contenido se quiere conocer no existe
     } else {
+        printf("entreeee");
         // Obtener la lista de publicaciones del usuario objetivo
         char publication_list[1024];
         memset(publication_list, 0, sizeof(publication_list));
@@ -270,8 +270,8 @@ void * SendResponse(void * sc){
             }
 
     // Enviar respuesta al cliente
-    printf("%d",ret);
     if (already_sent == 0){
+        printf("\n%d\n", ret);
         if (sendByte(s_local, ret) != 0) {
             perror("SERVIDOR: Error al enviar el resultado al cliente");
         }

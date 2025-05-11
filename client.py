@@ -30,7 +30,7 @@ class client :
 
     @staticmethod
     def _validate_field(field: str) -> bool:
-        return isinstance(field, str) and 0 < len(field.encode()) <= protocol.MAX_LEN
+        return (field is not None) and isinstance(field, str) and 0 < len(field.encode()) <= protocol.MAX_LEN
 
     @staticmethod
     def  register(user) :

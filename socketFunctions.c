@@ -90,7 +90,7 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
         return ERROR_COMMUNICATION;
     }
 
-    if (strcmp(parsedMessage->action, "DELETE") || strcmp(parsedMessage->action, "LIST_CONTENT") == 0) {
+    if (strcmp(parsedMessage->action, "DELETE") == 0 || strcmp(parsedMessage->action, "LIST_CONTENT") == 0) {
         parsedMessage->argument2 = NULL; // No hay argumentos adicionales
         return 0;
     } 
@@ -106,7 +106,9 @@ int parseMessage(int socket, ParsedMessage *parsedMessage){
         return ERROR_COMMUNICATION;
     }
     parsedMessage->argument2 = strdup(buffer); // Copiar los argumentos
-    if (parsedMessage->argument1 == NULL) {
+
+
+    if (parsedMessage->argument2 == NULL) {
         perror("Error al asignar memoria para los argumentos");
         free(parsedMessage->action); // Liberar memoria en caso de error
         free(parsedMessage->UserName);
@@ -139,7 +141,6 @@ void freeParsedMessage(ParsedMessage *parsedMessage) {
 }
 
 void initializeUserList() {
-    printf("Entre a initializeUserList\n");
     userList.head = NULL;
     pthread_mutex_init(&userList.mutex, NULL);
 }
@@ -148,19 +149,15 @@ void initializeUserList() {
 // Función para verificar si un usuario ya está registrado
 int is_user_registered(const char *username) {
     pthread_mutex_lock(&userList.mutex);
-    printf("Entre a is_user_registered\n");
     UserNode *current = userList.head;
     while (current != NULL) {
-        printf("%s", current->username);
         if (strcmp(current->username, username) == 0) {
             pthread_mutex_unlock(&userList.mutex);
-            printf("Sali de is_user_registered: 1\n");
             return 1; // Usuario encontrado
         }
         current = current->next;
     }
     pthread_mutex_unlock(&userList.mutex);
-    printf("Sali de is_user_registered: 0\n");
     return 0; // Usuario no encontrado
 }
 
@@ -343,8 +340,9 @@ int get_ListUsers(char *buffer, size_t buffer_size) {
     while (current != NULL) {
         if (current->connected) {
             // Información del usuario
+            char *ip_str = inet_ntoa(current->ip); // Convert IP to string
             int written = snprintf(buffer + offset, buffer_size - offset, "%s %s %d\n",
-                                    current->username, current->ip_address, current->port);
+                                    current->username, ip_str, current->port);
             if (written < 0 || written >= buffer_size - offset) {
                 break; // Evitar desbordamiento del buffer
             }
