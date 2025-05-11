@@ -1,6 +1,7 @@
 import socket
 
 MAX_LEN = 256  # tamaño máximo de nombre, ruta, etc.
+MAX_FILE_SIZE = 4096 # tamaño máximo que se puede leer de un archivo cada ronda
 
 
 # Configuración para operaciones
@@ -105,75 +106,146 @@ def recv_byte(sock: socket.socket) -> int:
     # acceder a un elemento del objeto bytes devuelve el valor entero de ese byte
     return b[0]
 
+def recv_bytes(sock: socket.socket, num_bytes: int) -> bytes:
+    # Lee exactamente num_bytes del socket.
+    data = bytearray()
+    # Es importante leer en un bucle hasta que se reciban todos los bytes,
+    # ya que sock.recv(N) puede devolver menos de N bytes.
+    while len(data) < num_bytes:
+        packet = sock.recv(num_bytes - len(data))
+        if not packet:
+            # La conexión se cerró prematuramente
+            raise ConnectionError('Conexión cerrada inesperadamente mientras se recibían bytes')
+        data.extend(packet)
+    return bytes(data)
+
 def communicate_with_server(server: str, port: int, list_str: list, default_error_value: int) -> int:
+    sock = None
     try:
-        # with asegura cerrar el socket después de salir de él
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # timeout de 10 segundos para que si hay un fallo en las operaciones bloqueantes, el programa no quede bloqueado indefinidamente
-            sock.settimeout(10)
-            sock.connect((server, port))
-            # envíamos todas las cadenas necesarias al servidor
-            for string in list_str:
-                send_str(sock, string)
-            # devolvemos el código recibido y el socket por si hace falta más comunicaciones
-            code = recv_byte(sock)
-            return code, sock
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # timeout de 10 segundos para que si hay un fallo en las operaciones bloqueantes, el programa no quede bloqueado indefinidamente
+        sock.settimeout(10)
+        sock.connect((server, port))
+        # envíamos todas las cadenas necesarias al servidor
+        for string in list_str:
+            send_str(sock, string)
+        # devolvemos el código recibido y el socket por si hace falta más comunicaciones
+        code = recv_byte(sock)
+        return code, sock
             
-    # si hay cualquier tipo de error en el cliente, se devuelve el valor predeterminado de error
+    # si hay cualquier tipo de error en el cliente, se devuelve el valor predeterminado de error y se cierra el socket
     except (socket.error, ValueError, ConnectionError, OSError, TimeoutError, UnicodeError) as e:
-        return default_error_value
+        if sock:
+            sock.close()
+        return default_error_value, None
     
 def register(server: str, port: int, user: str) -> str:
     # mandamos solicitud de registro al servidor
     settings = SETTINGS['register']
     code, _sock = communicate_with_server(server, port, ["REGISTER", user], settings['default'])
+    if _sock:
+        _sock.close()
     return settings.get(code, settings[settings['default']])
 
 def unregister(server: str, port: int, user: str) -> str:
     # mandamos solicitud de borrar registro al servidor
     settings = SETTINGS['unregister']
     code, _sock = communicate_with_server(server, port, ["UNREGISTER", user], settings['default'])
+    if _sock:
+        _sock.close()
     return settings.get(code, settings[settings['default']])
 
 def connect(server: str, port: int, user: str, chosen_port: str) -> str:
     # mandamos solicitud de conexión al servidor
     settings = SETTINGS['connect']
     code, _sock = communicate_with_server(server, port, ["CONNECT", user, str(chosen_port)], settings['default'])
+    if _sock:
+        _sock.close()
     return settings.get(code, settings[settings['default']])
 
 def disconnect(server: str, port: int, user: str) -> str:
     # mandamos solicitud de desconexión al servidor
     settings = SETTINGS['disconnect']
     code, _sock = communicate_with_server(server, port, ["DISCONNECT", user], settings['default'])
+    if _sock:
+        _sock.close()
     return settings.get(code, settings[settings['default']])
     
 def publish(server: str, port: int, user: str, fileName: str, description: str) -> str:
     # mandamos solicitud de publicación al servidor
     settings = SETTINGS['publish']
     code, _sock = communicate_with_server(server, port, ["PUBLISH", user, fileName, description], settings['default'])
+    if _sock:
+        _sock.close()
     return settings.get(code, settings[settings['default']])
 
 def delete(server: str, port: int, user: str, fileName: str) -> str:
     # mandamos solicitud de publicación al servidor
     settings = SETTINGS['delete']
     code, _sock = communicate_with_server(server, port, ["DELETE", user, fileName], settings['default'])
+    if _sock:
+        _sock.close()
     return settings.get(code, settings[settings['default']])
 
 def list_users(server: str, port: int, user: str) -> str:
     # mandamos solicitud de lista de usuarios al servidor
     settings = SETTINGS['list_users']
-    code, _sock = communicate_with_server(server, port, ["LIST_USERS", user], settings['default'])
+    code, sock = communicate_with_server(server, port, ["LIST_USERS", user], settings['default'])
     msg = settings.get(code, settings[settings['default']])
     # si el código recibido es 0, esperamos recibir la lista de usuarios
-    if code == 0:
+    if (code == 0) and (sock is not None):
         try:
             # with asegura cerrar el socket después de salir de él
-            with _sock as sock:
+            with sock as sock_conn:
+                # fix: esteban te odio
+                number_str = recv_str(sock_conn)
+                try:
+                    number = int(number_str)
+                except ValueError:
+                    # el servidor ha retornado un valor no integer
+                    return settings[settings['default']]
+    
                 #recibimos la información de cada usuario
-                for i in range(int(recv_str(sock))):
-                    msg += recv_str(sock)
+                for i in range(number):
+                    msg += recv_str(sock_conn)
+
+                return msg
             
         # si hay cualquier tipo de error en el cliente, se devuelve el valor predeterminado de error
         except (socket.error, ValueError, ConnectionError, OSError, TimeoutError, UnicodeError) as e:
             return settings[settings['default']]
-    return msg
+    else:
+        if sock:
+            sock.close()
+        return msg
+    
+def list_content(server: str, port: int, local_user: str, remote_user: str) -> str:
+    # mandamos solicitud de lista de contenidos al servidor
+    settings = SETTINGS['list_content']
+    code, sock = communicate_with_server(server, port, ["LIST_CONTENT", local_user, remote_user], settings['default'])
+    msg = settings.get(code, settings[settings['default']])
+    # si el código recibido es 0, esperamos recibir la lista de usuarios
+    if (code == 0) and (sock is not None):
+        try:
+            # with asegura cerrar el socket después de salir de él
+            with sock as sock_conn:
+                number_str = recv_str(sock_conn)
+                try:
+                    number = int(number_str)
+                except ValueError:
+                    # el servidor ha retornado un valor no integer
+                    return settings[settings['default']]
+    
+                #recibimos la información de cada usuario
+                for i in range(number):
+                    msg += recv_str(sock_conn)
+
+                return msg
+            
+        # si hay cualquier tipo de error en el cliente, se devuelve el valor predeterminado de error
+        except (socket.error, ValueError, ConnectionError, OSError, TimeoutError, UnicodeError) as e:
+            return settings[settings['default']]
+    else:
+        if sock:
+            sock.close()
+        return msg

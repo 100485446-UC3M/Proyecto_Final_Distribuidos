@@ -4,6 +4,7 @@ import argparse
 import protocol
 import socket
 import threading
+import os
 
 class client :
 
@@ -53,8 +54,65 @@ class client :
         else:
             settings = protocol.SETTINGS['unregister']
             print(settings[settings['default']])
-   
 
+    @staticmethod
+    def _handle_p2p_connection(connection):
+        try:
+            # recibir "GET_FILE"
+            command = protocol.recv_str(connection)
+            if command == "GET_FILE":
+                # recibir path absoluto de uno de mis ficheros
+                file_path_str = protocol.recv_str(connection)
+                file_path = Path(file_path_str)
+
+                if not file_path.is_absolute():
+                    # Path no absoluto, error. Mandamos 2
+                    connection.sendall(b'2') 
+                elif not file_path.exists() or not file_path.is_file():
+                    connection.sendall(b'1') # mandar 1 si el file no existe
+                else:
+                    try:
+                        connection.sendall(b'0') # mandar 0 si tengo el get_file y el fichero
+                        
+                        file_size = os.path.getsize(file_path)
+                        # mandar tamaño en bytes del fichero como una cadena
+                        protocol.send_str(connection, str(file_size))
+
+                        # abrir fichero y mandar bloques periódicamente. with open se encargará de cerrarlo más tarde
+                        with open(file_path, 'rb') as f:
+                            while True:
+                                chunk = f.read(protocol.MAX_FILE_SIZE)
+                                if not chunk:
+                                    break # Fin del fichero
+                                connection.sendall(chunk)
+                    except Exception:
+                        # Error al abrir el archivo. Mandamos 2
+                        connection.sendall(b'2')
+            else:
+                # Comando no esperado, mandamos 2
+                connection.sendall(b'2')
+        except (socket.error, ValueError, ConnectionError, OSError, TimeoutError, UnicodeError) as e:
+            # Error no esperado, mandamos 2
+            connection.sendall(b'2')
+        finally:
+            # una vez la transferencia está hecha o ha habido algún tipo de error, cerramos la comunicación con el cliente
+            connection.close()
+    
+    @staticmethod
+    def _p2p_server_loop(sock):
+        while client._running:
+            try:
+                # connection es un nuevo socket que se usa para transmitir datos con el otro cliente
+                # client_address es una tupla con la dirección ip y el puerto del cliente
+                connection, client_address = sock.accept()
+                client._handle_p2p_connection(connection)
+                    
+            except socket.timeout:
+                # cada segundo revisa de nuevo el flag _running
+                continue
+            except OSError:
+                # listener.close() en disconnect() lanza OSError. debemos salir del bucle
+                break
     
     @staticmethod
     def  connect(user) :
@@ -76,31 +134,12 @@ class client :
 
             # Empieza a escuchar. Permitimos que haya hasta 5 clientes en cola si ya hay uno conectado
             client._listener.listen(5)
-
-            # función del hilo que escucha las peticiones de descarga de ficheros de otros usuarios
-            def p2p(sock):
-                while client._running:
-                    try:
-                        # connection es un nuevo socket que se usa para transmitir datos con el otro cliente
-                        # client adress es una tupla con la dirección ip y el puerto del cliente
-                        connection, client_address = sock.accept()
-                        
-                        # todo: manejar petición
-                        try:
-                            pass
-                        finally:
-                            connection.close()
-                    except socket.timeout:
-                        # cada segundo revisa de nuevo el flag
-                        continue
-                    except OSError:
-                        # listener.close() lanza OSError. debemos salir del bucle
-                        break
             
+            # review: race condition en client._running?
             # por defecto, el hilo ejecutará
             client._running = True
             # creamos el hilo
-            client._thread = threading.Thread(target=p2p, args=(client._listener,))
+            client._thread = threading.Thread(target=client._p2p_server_loop, args=(client._listener,))
             client._thread.start()
 
             msg = protocol.connect(client._server, client._port, user, chosen_port)
@@ -132,15 +171,19 @@ class client :
             settings = protocol.SETTINGS['disconnect']
             print(settings[settings['default']])
 
+    #fix: no funciona
     @staticmethod
     def  publish(fileName,  description) :
-        if (fileName is not None) and (type(fileName) is str) and (0 < len(fileName.encode("utf-8")) <= protocol.MAX_LEN) and (Path(fileName).is_absolute()) and (description is not None) and (type(description) is str) and (0 < len(description.encode("utf-8")) <= protocol.MAX_LEN):  
+        if ((fileName is not None) and (type(fileName) is str) and (0 < len(fileName.encode("utf-8")) <= protocol.MAX_LEN) and (Path(fileName).is_absolute()) and
+           (description is not None) and (type(description) is str) and (0 < len(description.encode("utf-8")) <= protocol.MAX_LEN)
+        ):  
             msg = protocol.publish(client._server, client._port, client._user, fileName, description)
             print("c> " + msg)
         else:
             settings = protocol.SETTINGS['publish']
             print(settings[settings['default']])
 
+    #fix: no funciona
     @staticmethod
     def  delete(fileName) :
         if (fileName is not None) and (type(fileName) is str) and (0 < len(fileName.encode("utf-8")) <= protocol.MAX_LEN) and (Path(fileName).is_absolute()):  
@@ -159,14 +202,98 @@ class client :
 
     @staticmethod
     def  listcontent(user) :
-        #  todo
-        return client.RC.ERROR
+        msg = protocol.list_content(client._server, client._port, client._user, user)
+        print("c> " + msg)
     
+    @staticmethod
+    def _get_remote_user_address(target_user_name):
+        # función helper para obtener la ip y puerto de un usuario
+        users_response = protocol.list_users(client._server, client._port, client._user)
+        resp = users_response.strip()
+
+        if not resp or '\n' not in resp:
+            return None, None  # respuesta mal formada o vacía
+
+        first_line, *rest = resp.splitlines()
+
+        if first_line.upper().startswith("LIST_USERS OK"):
+            for line_data in rest:
+                parts = line_data.split()
+                if len(parts) >= 3 and parts[0] == target_user_name:
+                    return parts[1], parts[2]  # IP, Puerto
+            return None, None  # el usuario no estaba en la lista
+        else:
+            return None, None  # list_users ha fallado
 
     @staticmethod
     def  getfile(user,  remote_FileName,  local_FileName) :
-        #  todo
-        return client.RC.ERROR
+        settings = protocol.SETTINGS['get_file']
+        if ((user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN) and 
+            (remote_FileName is not None) and (type(remote_FileName) is str) and (0 < len(remote_FileName.encode("utf-8")) <= protocol.MAX_LEN) and (Path(remote_FileName).is_absolute()) and 
+            (local_FileName is not None) and (type(local_FileName) is str) and (0 < len(local_FileName.encode("utf-8")) <= protocol.MAX_LEN) and (Path(local_FileName).is_absolute())
+        ):  
+
+            # obtenemos la IP y el puerto del user
+            remote_user_ip, remote_user_port = client._get_remote_user_address(user)
+
+            if remote_user_ip is None or remote_user_port is None:
+                # Error al obtener la dirección del usuario (no encontrado, error en list_users, etc.)
+                print(settings[settings['default']])
+                return
+            
+
+            code, sock = protocol.communicate_with_server(remote_user_ip, int(remote_user_port), ["GET_FILE", remote_FileName], settings['default'])        
+            msg = settings.get(code, settings[settings['default']])
+            # si el código recibido es 0, esperamos recibir la lista de usuarios
+            if (code == 0) and (sock is not None):
+                try:
+                    # with asegura cerrar el socket después de salir de él
+                    with sock as sock_conn:
+                        number_str = protocol.recv_str(sock_conn)
+                        try:
+                            number = int(number_str)
+                        except ValueError:
+                            # el servidor ha retornado un valor no integer
+                            print(settings[settings['default']])
+                            return
+
+                        # creamos o abrimos el fichero. además, with open se asegurará de cerrarlo más tarde
+                        with open(local_FileName, 'wb') as f:
+                            # leer contenido del fichero remoto desde sock_conn
+                            bytes_remaining = number
+                            while bytes_remaining > 0:
+                                chunk_size = min(protocol.MAX_FILE_SIZE, bytes_remaining)
+                                data = protocol.recv_bytes(sock_conn, chunk_size)
+                                if not data:
+                                    # Conexión cerrada prematuramente
+                                    print(settings[settings['default']])
+                                    # tratamos de borrar el archivo incompleto
+                                    try:
+                                        os.remove(local_FileName)
+                                    except OSError:
+                                        pass
+                                    return
+                                f.write(data)
+                                bytes_remaining -= len(data)
+                    
+                # si hay cualquier tipo de error en el cliente, se devuelve el valor predeterminado de error
+                except (socket.error, ValueError, ConnectionError, OSError, TimeoutError, UnicodeError) as e:
+                    print(settings[settings['default']])
+                    return
+            else:
+                # communicate with server falló
+                # msg ya contiene el valor apropiado
+                # solo tenemos que asegurarnos de cerrar el socket
+                if sock:
+                    sock.close()
+
+            print(msg)
+            return
+        
+        else:
+            print(settings[settings['default']])
+            return
+
 
     # *
     # **
@@ -287,7 +414,6 @@ class client :
         if (not client.parseArguments(argv)) :
             client.usage()
             return
-        # todo: El nombre server puede ser tanto el nombre (dominio-punto) como la dirección IP (decimal-punto) del servidor.
 
         client.shell()
         print("+++ FINISHED +++")
