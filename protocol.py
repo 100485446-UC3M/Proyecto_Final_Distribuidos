@@ -1,4 +1,4 @@
-import socket, threading
+import socket
 
 MAX_LEN = 256  # tamaño máximo de nombre, ruta, etc.
 
@@ -122,74 +122,25 @@ def communicate_with_server(server: str, port: int, list_str: list, default_erro
     except (socket.error, ValueError, ConnectionError, OSError, TimeoutError, UnicodeError) as e:
         return default_error_value
     
-def register(server: str, port: int, user: str) -> int:
+def register(server: str, port: int, user: str) -> str:
+    # mandamos solicitud de registro al servidor
     settings = SETTINGS['register']
     code = communicate_with_server(server, port, ["REGISTER", user], settings['default'])
     return settings.get(code, settings[settings['default']])
 
-def unregister(server: str, port: int, user: str) -> int:
+def unregister(server: str, port: int, user: str) -> str:
+    # mandamos solicitud de borrar registro al servidor
     settings = SETTINGS['unregister']
     code = communicate_with_server(server, port, ["UNREGISTER", user], settings['default'])
     return settings.get(code, settings[settings['default']])
 
-def connect(server: str, port: int, user: str) -> int:
-    global running, listener, thread
-    
-    # Creamos el socket de servidor
-    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    # El listener revisará periódicamente si debe ser desactivado
-    listener.settimeout(1)
-
-    # Configuramos este socket con la IP host local y puerto 0 → el SO elige un puerto libre
-    listener.bind(('0.0.0.0', 0))
-
-    # Recuperamos el puerto asignado
-    _, chosen_port = listener.getsockname()
-
-    # Empieza a escuchar. Permitimos que haya hasta 5 clientes en cola si ya hay uno conectado
-    listener.listen(5)
-
-    # función del hilo que escucha las peticiones de descarga de ficheros de otros usuarios
-    def p2p(sock):
-        while running:
-            try:
-                # connection es un nuevo socket que se usa para transmitir datos con el otro cliente
-                # client adress es una tupla con la dirección ip y el puerto del cliente
-                connection, client_address = sock.accept()
-                
-                # todo: manejar petición
-                try:
-                    pass
-                finally:
-                    connection.close()
-            except socket.timeout:
-                # cada segundo revisa de nuevo el flag
-                continue
-            except OSError:
-                # listener.close() lanza OSError. debemos salir del bucle
-                break
-
-
-    # creamos el hilo
-    thread = threading.Thread(target=p2p, daemon='True', args=(listener,))
-    running = True
-    thread.start()
-
+def connect(server: str, port: int, user: str, chosen_port: str) -> str:
     # mandamos solicitud de conexión al servidor
     settings = SETTINGS['connect']
     code = communicate_with_server(server, port, ["CONNECT", user, str(chosen_port)], settings['default'])
     return settings.get(code, settings[settings['default']])
 
-def disconnect(server: str, port: int, user: str) -> int:
-    global running, listener, thread
-    # señalo al thread que debe parar su ejecución
-    running = False
-    # cierro el socket de escucha, lo que fuerza un OS error en el thread
-    listener.close()
-    # espero a que el hilo termine
-    thread.join()
-     
+def disconnect(server: str, port: int, user: str) -> str:
     # mandamos solicitud de desconexión al servidor
     settings = SETTINGS['disconnect']
     code = communicate_with_server(server, port, ["DISCONNECT", user], settings['default'])

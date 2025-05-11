@@ -1,6 +1,8 @@
 from enum import Enum
 import argparse
 import protocol
+import socket
+import threading
 
 class client :
 
@@ -25,7 +27,11 @@ class client :
     # ****************** ATTRIBUTES ******************
     _server = None
     _port = -1
+
     _user = None
+    _running = False
+    _listener = None
+    _thread = None
 
     # ******************** METHODS *******************
 
@@ -54,7 +60,49 @@ class client :
         if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):
             if (client._user is not None) and (client._user != user):
                 client.disconnect(client._user)
-            msg = protocol.connect(client._server, client._port, user)
+
+            # Creamos el socket de servidor
+            client._listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client._listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # El listener revisará periódicamente si debe ser desactivado
+            client._listener.settimeout(1)
+
+            # Configuramos este socket con la IP host local y puerto 0 → el SO elige un puerto libre
+            client._listener.bind(('0.0.0.0', 0))
+
+            # Recuperamos el puerto asignado
+            _, chosen_port = client._listener.getsockname()
+
+            # Empieza a escuchar. Permitimos que haya hasta 5 clientes en cola si ya hay uno conectado
+            client._listener.listen(5)
+
+            # función del hilo que escucha las peticiones de descarga de ficheros de otros usuarios
+            def p2p(sock):
+                while client._running:
+                    try:
+                        # connection es un nuevo socket que se usa para transmitir datos con el otro cliente
+                        # client adress es una tupla con la dirección ip y el puerto del cliente
+                        connection, client_address = sock.accept()
+                        
+                        # todo: manejar petición
+                        try:
+                            pass
+                        finally:
+                            connection.close()
+                    except socket.timeout:
+                        # cada segundo revisa de nuevo el flag
+                        continue
+                    except OSError:
+                        # listener.close() lanza OSError. debemos salir del bucle
+                        break
+            
+            # por defecto, el hilo ejecutará
+            client._running = True
+            # creamos el hilo
+            client._thread = threading.Thread(target=p2p, args=(client._listener,))
+            client._thread.start()
+
+            msg = protocol.connect(client._server, client._port, user, chosen_port)
             print(msg)
             if msg == "CONNECT OK":
                 # en caso de una conexión exitosa, cambiamos el nombre de usuario actualmente conectado
@@ -69,6 +117,14 @@ class client :
         # toda desconexión implica borrar el nombre del usuario conectado actualmente
         client._user = None
         if (user is not None) and (type(user) is str) and (0 < len(user.encode("utf-8")) <= protocol.MAX_LEN):  
+            if client._listener:
+                # señalo al thread que debe parar su ejecución
+                client._running = False
+                # cierro el socket de escucha, lo que fuerza un OS error en el thread
+                client._listener.close()
+                # espero a que el hilo termine
+                client._thread.join()
+
             msg = protocol.disconnect(client._server, client._port, user)
             print(msg)
         else:
