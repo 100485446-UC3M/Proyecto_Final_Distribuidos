@@ -340,7 +340,7 @@ int main(int argc, char * argv[]) {
     char local_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &local_addr.sin_addr, local_ip, INET_ADDRSTRLEN);
     // Mostrar mensaje de inicio
-    printf("s> init server %s:%ld\ns>", local_ip, port);
+    printf("s> init server %s:%ld\ns>\n", local_ip, port);
     fflush(stdout);
     // Inicializar variable global de control (busy)
     busy = 1;
