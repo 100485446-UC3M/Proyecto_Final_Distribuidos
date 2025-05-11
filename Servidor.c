@@ -23,7 +23,7 @@ void * SendResponse(void * sc){
         perror("SERVIDOR: un hilo no recibió la acción a realizar");
         pthread_exit(&ret);
     }
-    printf("OPERATION %s FROM %s AT %s\n", parsedMessage.action, parsedMessage.UserName, parsedMessage.fecha);
+    printf("s> OPERATION %s FROM %s AT %s\n", parsedMessage.action, parsedMessage.UserName, parsedMessage.fecha);
     // Procesar la solicitud
     if (strcmp(parsedMessage.action, "REGISTER") == 0) {
         
@@ -273,7 +273,6 @@ void * SendResponse(void * sc){
 
     // Enviar respuesta al cliente
     if (already_sent == 0){
-        printf("\n%d\n", ret);
         if (sendByte(s_local, ret) != 0) {
             perror("SERVIDOR: Error al enviar el resultado al cliente");
         }
@@ -329,7 +328,6 @@ int main(int argc, char * argv[]) {
         perror("SERVIDOR: Error al habilitar el socket para recibir conexiones\n");
         goto cleanup_servidor;
     }
-    printf("SERVIDOR: Activo\n");
 
     // Obtener la IP local
     struct sockaddr_in local_addr;
@@ -342,8 +340,8 @@ int main(int argc, char * argv[]) {
     char local_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &local_addr.sin_addr, local_ip, INET_ADDRSTRLEN);
     // Mostrar mensaje de inicio
-    printf("s > init server %s:%ld\n", local_ip, port);
-
+    printf("s> init server %s:%ld\ns>", local_ip, port);
+    fflush(stdout);
     // Inicializar variable global de control (busy)
     busy = 1;
 
@@ -358,7 +356,6 @@ int main(int argc, char * argv[]) {
     initializeUserList();
 
     // Bucle infinito para manejar las solicitudes
-    printf("SERVIDOR: Esperando conexión\n");
     while (1) {
         // Aceptar conexión del cliente
         if ((sc = accept(ss, (struct sockaddr *) &client_addr, &size)) < 0){
