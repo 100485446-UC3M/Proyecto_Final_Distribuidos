@@ -23,7 +23,7 @@ void * SendResponse(void * sc){
         perror("SERVIDOR: un hilo no recibió la acción a realizar");
         pthread_exit(&ret);
     }
-    printf("s> OPERATION %s FROM %s AT %s\n", parsedMessage.action, parsedMessage.UserName, parsedMessage.fecha);
+    printf("s> OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
     // Procesar la solicitud
     if (strcmp(parsedMessage.action, "REGISTER") == 0) {
         

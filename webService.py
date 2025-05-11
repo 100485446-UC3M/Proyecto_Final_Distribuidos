@@ -26,11 +26,11 @@ if __name__ == '__main__':
 
     from wsgiref.simple_server import make_server
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     logging.getLogger('spyne.protocol.xml').setLevel(logging.DEBUG)
 
-    logging.info("Servicio SOAP ejecutándose en http://127.0.0.1:8000")
-    logging.info("WSDL disponible en: http://localhost:8000/?wsdl")
+    logging.info("Servicio SOAP ejecutándose en http://127.0.0.1:5000")
+    logging.info("WSDL disponible en: http://localhost:5000/?wsdl")
 
     server = make_server('127.0.0.1', 5000, wsgi_app)
     server.serve_forever()

@@ -20,7 +20,7 @@ SETTINGS = {
     },
     'connect': {
         0: "CONNECT OK",
-        1: "CONNECT FAIL , USER DOES NOT EXIST", # review: espacio antes de la coma
+        1: "CONNECT FAIL , USER DOES NOT EXIST",
         2: "USER ALREADY CONNECTED",
         3: "CONNECT FAIL",
         'default': 3

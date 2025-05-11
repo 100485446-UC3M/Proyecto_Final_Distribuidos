@@ -229,8 +229,9 @@ class client :
     
     @staticmethod
     def _get_remote_user_address(target_user_name):
+        datetime_str = client.get_datetime()
         # función helper para obtener la ip y puerto de un usuario
-        users_response = protocol.list_users(client._server, client._port, client._user)
+        users_response = protocol.list_users(client._server, client._port, datetime_str, client._user)
         resp = users_response.strip()
 
         if not resp or '\n' not in resp:
