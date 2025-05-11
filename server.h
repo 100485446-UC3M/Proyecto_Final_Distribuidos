@@ -19,7 +19,8 @@
 // Estructura para almacenar la acción y los argumentos
 typedef struct {
     char *action;
-    char *UserName; // char *fecha;
+    char *UserName; 
+    char *fecha;
     char *argument1; // Para DELETE, PUBLISH y LIST_CONTENT
     char *argument2; // Solo para PUBLISH
 } ParsedMessage;

@@ -25,7 +25,7 @@ void * SendResponse(void * sc){
     }
     // Procesar la solicitud
     if (strcmp(parsedMessage.action, "REGISTER") == 0) {
-        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
+        printf("OPERATION %s FROM %s AT %s\n", parsedMessage.action, parsedMessage.UserName, parsedMessage.fecha);
         if (parsedMessage.UserName == NULL) {
             perror("SERVIDOR: Username faltantes para REGISTER");
             ret = 2; // Error en la comunicación
@@ -41,8 +41,7 @@ void * SendResponse(void * sc){
         }
     } else if (strcmp(parsedMessage.action, "UNREGISTER") == 0) {
 
-        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
-
+        printf("OPERATION %s FROM %s AT %s\n", parsedMessage.action, parsedMessage.UserName, parsedMessage.fecha);
         if (parsedMessage.UserName == NULL) {
             perror("SERVIDOR: Username faltantes para UNREGISTER");
             ret = 2; // Error en la comunicación
@@ -54,8 +53,7 @@ void * SendResponse(void * sc){
             ret = 2; // Error al eliminar
         }
     } else if (strcmp(parsedMessage.action, "CONNECT") == 0) {
-        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
-
+        printf("OPERATION %s FROM %s AT %s\n", parsedMessage.action, parsedMessage.UserName, parsedMessage.fecha);
         if (parsedMessage.UserName == NULL) {
             perror("SERVIDOR: Username faltantes para CONNECT");
             ret = 3; // Error en la comunicación
@@ -84,8 +82,7 @@ void * SendResponse(void * sc){
             }
         } 
     } else if (strcmp(parsedMessage.action, "PUBLISH") == 0) {
-        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
-
+        printf("OPERATION %s FROM %s AT %s\n", parsedMessage.action, parsedMessage.UserName, parsedMessage.fecha);
         if (parsedMessage.UserName == NULL) {
             perror("SERVIDOR: Username faltantes para PUBLISH");
             ret = 4; // Error en la comunicación
@@ -115,8 +112,7 @@ void * SendResponse(void * sc){
             }
         }
     } else if (strcmp(parsedMessage.action, "DELETE") == 0) {
-        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName );
-    
+        printf("OPERATION %s FROM %s AT %s\n", parsedMessage.action, parsedMessage.UserName, parsedMessage.fecha);    
         if (parsedMessage.UserName == NULL) {
             perror("SERVIDOR: Username faltantes para DELETE");
             ret = 4; // Error en la comunicación
@@ -141,8 +137,7 @@ void * SendResponse(void * sc){
             }
         }
     } else if (strcmp(parsedMessage.action, "LIST_USERS") == 0) {
-        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
-
+        printf("OPERATION %s FROM %s AT %s\n", parsedMessage.action, parsedMessage.UserName, parsedMessage.fecha);
         if (parsedMessage.UserName == NULL) {
             perror("SERVIDOR: Username faltantes para LIST_USERS");
             ret = 3; // Error en la comunicación
@@ -207,8 +202,7 @@ void * SendResponse(void * sc){
             }
         }
     } else if (strcmp(parsedMessage.action, "LIST_CONTENT") == 0){
-        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
-
+        printf("OPERATION %s FROM %s AT %s\n", parsedMessage.action, parsedMessage.UserName, parsedMessage.fecha);
     if (parsedMessage.UserName == NULL || parsedMessage.argument1 == NULL) {
         perror("SERVIDOR: Faltan argumentos para LIST_CONTENT");
         ret = 4; // Error en la comunicación
@@ -219,7 +213,6 @@ void * SendResponse(void * sc){
     } else if (!is_user_registered(parsedMessage.argument1)) {
         ret = 3; // Usuario cuyo contenido se quiere conocer no existe
     } else {
-        printf("entreeee");
         // Obtener la lista de publicaciones del usuario objetivo
         char publication_list[1024];
         memset(publication_list, 0, sizeof(publication_list));
@@ -237,18 +230,25 @@ void * SendResponse(void * sc){
                 ret = 4; // Error en la comunicación
             } else {
                 // Enviar la lista de publicaciones
-                if (sendMessage(s_local, publication_list, strlen(publication_list) + 1) != 0) {
-                    perror("SERVIDOR: Error al enviar la lista de publicaciones");
+                // Dividir la lista de publicaciones en tokens y enviar cada fichero uno a uno
+                char *file_info = strtok(publication_list, "\n");
+                while (file_info != NULL) {
+                if (sendMessage(s_local, file_info, strlen(file_info) + 1) != 0) {
+                    perror("SERVIDOR: Error al enviar la información del fichero");
                     ret = 4; // Error en la comunicación
-                } else {
-                    ret = 0; // Operación exitosa
-                    }
+                    break;
                 }
-            }  
-        }
-    } else if (strcmp(parsedMessage.action, "DISCONNECT") == 0) {
-        printf("OPERATION %s FROM %s\n", parsedMessage.action, parsedMessage.UserName);
-    
+                file_info = strtok(NULL, "\n"); // Obtener el siguiente fichero
+                }
+
+                if (ret != 4) {
+                ret = 0; 
+                    }
+                }  
+            }
+        } 
+    }else if (strcmp(parsedMessage.action, "DISCONNECT") == 0) {
+        printf("OPERATION %s FROM %s AT %s\n", parsedMessage.action, parsedMessage.UserName, parsedMessage.fecha);    
         if (parsedMessage.UserName == NULL) {
             perror("SERVIDOR: Username faltantes para DISCONNECT");
             ret = 3; // Error en la comunicación

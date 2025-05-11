@@ -13,7 +13,7 @@ class DateTimeService(ServiceBase):
 # Configurar la aplicación SOAP
 application = Application(
     [DateTimeService],
-    tns='http://datetime.com/datetime',
+    tns='http://datetime.com',
     in_protocol=Soap11(validator='lxml'),
     out_protocol=Soap11()
 )
@@ -22,8 +22,15 @@ application = Application(
 wsgi_app = WsgiApplication(application)
 
 if __name__ == '__main__':
+    import logging
+
     from wsgiref.simple_server import make_server
-    print("Servicio SOAP ejecutándose en http://127.0.0.1:5000")
-    print("WSDL disponible en http://127.0.0.1:5000/?wsdl")
+
+    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger('spyne.protocol.xml').setLevel(logging.DEBUG)
+
+    logging.info("Servicio SOAP ejecutándose en http://127.0.0.1:8000")
+    logging.info("WSDL disponible en: http://localhost:8000/?wsdl")
+
     server = make_server('127.0.0.1', 5000, wsgi_app)
     server.serve_forever()
